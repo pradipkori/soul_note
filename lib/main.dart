@@ -1,10 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:soul_note/splash_page.dart';
-import 'home_page.dart';
-import 'splash_page.dart' show SplashPage;
-import 'package:soul_note/home_page.dart' show HomePage;
+import 'package:hive_flutter/hive_flutter.dart';
 
-void main() {
+import 'splash_page.dart';
+import 'home_page.dart';
+import 'models/note_model.dart';
+import 'storage/hive_boxes.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 🔐 Initialize Hive
+  await Hive.initFlutter();
+
+  // 📌 Register NoteModel Adapter
+  Hive.registerAdapter(NoteModelAdapter());
+
+  // 📦 Open notes box
+  await Hive.openBox<NoteModel>(HiveBoxes.notesBox);
+
   runApp(const SoulNoteApp());
 }
 
@@ -17,13 +30,11 @@ class SoulNoteApp extends StatelessWidget {
       title: 'SoulNote',
       debugShowCheckedModeBanner: false,
 
-      // THEME SETTINGS
+      // 🌗 THEMES
       theme: ThemeData(
         brightness: Brightness.light,
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
-        ),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
 
       darkTheme: ThemeData(
@@ -35,13 +46,13 @@ class SoulNoteApp extends StatelessWidget {
         ),
       ),
 
-      themeMode: ThemeMode.system, // auto theme
+      themeMode: ThemeMode.system, // auto theme switch
 
-      // ROUTES
+      // 🗺 ROUTES
       initialRoute: "/splash",
       routes: {
-        "/splash": (_) => const SplashPage(),
-        "/home": (_) => const HomePage(),
+        "/splash": (context) => const SplashPage(),
+        "/home": (context) => const HomePage(),
       },
     );
   }
