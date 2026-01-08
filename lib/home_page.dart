@@ -4,6 +4,9 @@ import 'models/note_model.dart';
 import 'storage/hive_boxes.dart';
 import 'add_note_page.dart';
 import 'view_note_page.dart';
+import 'services/auth_service.dart';
+import 'auth/google_login_page.dart';
+
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -70,6 +73,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           ),
         ),
         actions: [
+          // 🔍 SEARCH BUTTON (UNCHANGED)
           IconButton(
             icon: Icon(_isSearching ? Icons.close : Icons.search),
             onPressed: () {
@@ -82,7 +86,28 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               });
             },
           ),
+
+          // 🚪 LOGOUT BUTTON (NEW)
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: "Logout",
+            onPressed: () async {
+              final authService = AuthService();
+              await authService.signOut();
+
+              if (!context.mounted) return;
+
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const GoogleLoginPage(),
+                ),
+                    (route) => false,
+              );
+            },
+          ),
         ],
+
       ),
       body: ValueListenableBuilder<Box<NoteModel>>(
         valueListenable: box.listenable(),
@@ -397,6 +422,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         ),
       ),
     );
+
   }
 
   String _formatDate(DateTime date) {

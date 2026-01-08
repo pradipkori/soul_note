@@ -26,9 +26,50 @@ class _ViewNotePageState extends State<ViewNotePage> {
   NoteModel get note =>
       HiveBoxes.getNotesBox().getAt(widget.index)!;
 
-  void deleteNote(BuildContext context) {
-    HiveBoxes.getNotesBox().deleteAt(widget.index);
-    Navigator.pop(context);
+  // ✅ CONFIRM DELETE (NEW)
+  Future<void> _confirmDelete(BuildContext context) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.grey[900],
+          title: const Text(
+            "Delete Note?",
+            style: TextStyle(color: Colors.white),
+          ),
+          content: const Text(
+            "Are you sure you want to delete this note?",
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text(
+                "Delete",
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldDelete == true) {
+      HiveBoxes.getNotesBox().deleteAt(widget.index);
+      Navigator.pop(context);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text("Note deleted"),
+          backgroundColor: Colors.grey[850],
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Future<void> _playSong(NoteSong song, int index) async {
@@ -62,7 +103,7 @@ class _ViewNotePageState extends State<ViewNotePage> {
 
   @override
   Widget build(BuildContext context) {
-    final currentNote = note; // ✅ always fresh
+    final currentNote = note;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -71,10 +112,13 @@ class _ViewNotePageState extends State<ViewNotePage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
+          // 🗑 DELETE (FIXED)
           IconButton(
             icon: const Icon(Icons.delete_outline),
-            onPressed: () => deleteNote(context),
+            onPressed: () => _confirmDelete(context),
           ),
+
+          // ✏️ EDIT
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () async {
@@ -87,7 +131,7 @@ class _ViewNotePageState extends State<ViewNotePage> {
                   ),
                 ),
               );
-              setState(() {}); // 🔥 FORCE REFRESH AFTER EDIT
+              setState(() {}); // 🔥 refresh after edit
             },
           ),
         ],
@@ -136,7 +180,7 @@ class _ViewNotePageState extends State<ViewNotePage> {
               ),
             ),
 
-            // 🎵 SONGS SECTION ✅ WILL NOW SHOW
+            // 🎵 SONGS
             if (currentNote.songs.isNotEmpty) ...[
               const SizedBox(height: 24),
               const Divider(color: Colors.white24),
@@ -155,8 +199,7 @@ class _ViewNotePageState extends State<ViewNotePage> {
                   currentNote.songs.length,
                       (index) {
                     final song = currentNote.songs[index];
-                    final isPlaying =
-                        _playingIndex == index;
+                    final isPlaying = _playingIndex == index;
 
                     return Card(
                       color: Colors.white.withOpacity(0.06),
@@ -171,12 +214,14 @@ class _ViewNotePageState extends State<ViewNotePage> {
                         title: Text(
                           song.title,
                           style: const TextStyle(
-                              color: Colors.white),
+                            color: Colors.white,
+                          ),
                         ),
                         subtitle: Text(
                           '${song.artist} • ${song.duration}s',
                           style: const TextStyle(
-                              color: Colors.white54),
+                            color: Colors.white54,
+                          ),
                         ),
                         onTap: () {
                           isPlaying
@@ -195,11 +240,13 @@ class _ViewNotePageState extends State<ViewNotePage> {
     );
   }
 
-  // 🌙 Reusable SoulMoment chip
+  // 🌙 Reusable chip
   Widget _momentChip(String label) {
     return Container(
-      padding:
-      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 6,
+      ),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.08),
         borderRadius: BorderRadius.circular(20),

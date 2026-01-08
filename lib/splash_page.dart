@@ -1,7 +1,9 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'home_page.dart'; // <-- IMPORTANT
+import 'home_page.dart';
+import 'auth/google_login_page.dart'; // ✅ NEW
+import 'package:firebase_auth/firebase_auth.dart'; // ✅ NEW// <-- IMPORTANT
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -36,16 +38,24 @@ class _SplashPageState extends State<SplashPage>
     });
 
     // AFTER ANIMATION → GO TO HOME
-    Future.delayed(const Duration(seconds: 5), () {
+    Future.delayed(const Duration(seconds: 5), () async {
       if (!mounted) return;
+
+      final user = FirebaseAuth.instance.currentUser;
+
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           transitionDuration: const Duration(milliseconds: 900),
-          pageBuilder: (_, animation, __) =>
-              FadeTransition(opacity: animation, child: const HomePage()),
+          pageBuilder: (_, animation, __) => FadeTransition(
+            opacity: animation,
+            child: user != null
+                ? const HomePage()
+                : const GoogleLoginPage(),
+          ),
         ),
       );
     });
+
   }
 
   @override

@@ -14,42 +14,42 @@ class AddNotePage extends StatefulWidget {
   State<AddNotePage> createState() => _AddNotePageState();
 }
 
-class _AddNotePageState extends State<AddNotePage> with SingleTickerProviderStateMixin {
+class _AddNotePageState extends State<AddNotePage>
+    with TickerProviderStateMixin {
   final titleCtrl = TextEditingController();
   final contentCtrl = TextEditingController();
 
   DateTime? startTime;
   String selectedMood = "Calm 🌿";
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
   bool _isAnalyzingMood = false;
 
   final List<NoteSong> _songs = [];
 
-  // Modern color scheme
-  final Color primaryColor = const Color(0xFF6366F1); // Indigo
-  final Color secondaryColor = const Color(0xFF8B5CF6); // Purple
-  final Color accentColor = const Color(0xFFEC4899); // Pink
-  final Color backgroundColor = const Color(0xFF0F172A); // Dark slate
-  final Color surfaceColor = const Color(0xFF1E293B); // Lighter slate
+  late AnimationController _fadeCtrl;
+  late AnimationController _pulseCtrl;
+
+  // Modern UI Colors
+  final Color bg = const Color(0xFF0A0E1A);
+  final Color surface = const Color(0xFF151B2E);
+  final Color surfaceLight = const Color(0xFF1E2538);
+  final Color primary = const Color(0xFF6366F1);
+  final Color accent = const Color(0xFF8B5CF6);
 
   @override
   void initState() {
     super.initState();
     startTime = DateTime.now();
 
-    _animationController = AnimationController(
+    _fadeCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    );
+      duration: const Duration(milliseconds: 800),
+    )..forward();
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
-    );
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
 
-    _animationController.forward();
-
-    // Listen to content changes for auto mood detection
     contentCtrl.addListener(_autoDetectMood);
   }
 
@@ -57,90 +57,54 @@ class _AddNotePageState extends State<AddNotePage> with SingleTickerProviderStat
   void dispose() {
     titleCtrl.dispose();
     contentCtrl.dispose();
-    _animationController.dispose();
+    _fadeCtrl.dispose();
+    _pulseCtrl.dispose();
     super.dispose();
   }
 
-  // Auto mood detection based on content
-  void _autoDetectMood() {
-    if (contentCtrl.text.length < 20) return;
-
-    final text = contentCtrl.text.toLowerCase();
-    String detectedMood = "Calm 🌿";
-
-    // Keyword-based mood detection
-    final happyWords = ['happy', 'joy', 'excited', 'great', 'amazing', 'wonderful', 'love', 'blessed', 'grateful'];
-    final heavyWords = ['sad', 'tired', 'exhausted', 'hard', 'difficult', 'painful', 'hurt', 'miss', 'alone'];
-    final lovedWords = ['love', 'heart', 'care', 'appreciate', 'cherish', 'adore', 'romance', 'together'];
-    final stressedWords = ['stress', 'anxiety', 'worried', 'nervous', 'overwhelmed', 'pressure', 'deadline', 'busy'];
-
-    int happyScore = happyWords.where((w) => text.contains(w)).length;
-    int heavyScore = heavyWords.where((w) => text.contains(w)).length;
-    int lovedScore = lovedWords.where((w) => text.contains(w)).length;
-    int stressedScore = stressedWords.where((w) => text.contains(w)).length;
-
-    if (lovedScore > 0 && lovedScore >= happyScore) {
-      detectedMood = "Loved ❤️";
-    } else if (happyScore > heavyScore && happyScore > stressedScore) {
-      detectedMood = "Happy 😊";
-    } else if (heavyScore > 0) {
-      detectedMood = "Heavy 💧";
-    } else if (stressedScore > 0) {
-      detectedMood = "Stressed 🌪️";
-    }
-
-    if (detectedMood != selectedMood) {
-      setState(() {
-        selectedMood = detectedMood;
-        _isAnalyzingMood = true;
-      });
-
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        if (mounted) {
-          setState(() => _isAnalyzingMood = false);
-        }
-      });
-    }
-  }
-
+  // ---------------- SAVE NOTE ----------------
   void saveNote() {
-    final endTime = DateTime.now();
-    final duration = endTime.difference(startTime!).inSeconds;
+    final duration = DateTime.now().difference(startTime!).inSeconds;
 
-    final note = NoteModel(
-      title: titleCtrl.text.trim().isEmpty ? "Untitled" : titleCtrl.text.trim(),
-      content: contentCtrl.text.trim(),
-      createdAt: DateTime.now(),
-      timeOfDay: getTimeOfDay(DateTime.now()),
-      mood: selectedMood,
-      writingDuration: duration,
-      songs: List<NoteSong>.from(_songs),
+    HiveBoxes.getNotesBox().add(
+      NoteModel(
+        title: titleCtrl.text.trim().isEmpty ? "Untitled" : titleCtrl.text.trim(),
+        content: contentCtrl.text.trim(),
+        createdAt: DateTime.now(),
+        timeOfDay: getTimeOfDay(DateTime.now()),
+        mood: selectedMood,
+        writingDuration: duration,
+        songs: List.from(_songs),
+      ),
     );
 
-    HiveBoxes.getNotesBox().add(note);
     Navigator.pop(context);
   }
 
-  Color _getMoodColor() {
-    switch (selectedMood) {
-      case "Happy 😊":
-        return const Color(0xFFFBBF24); // Amber
-      case "Heavy 💧":
-        return const Color(0xFF3B82F6); // Blue
-      case "Loved ❤️":
-        return const Color(0xFFEC4899); // Pink
-      case "Stressed 🌪️":
-        return const Color(0xFFEF4444); // Red
-      default:
-        return const Color(0xFF10B981); // Green
-    }
+  // ---------------- MOOD ----------------
+  void _autoDetectMood() {
+    if (contentCtrl.text.length < 20) return;
+    if (selectedMood != "Calm 🌿") return;
+
+    setState(() {
+      _isAnalyzingMood = true;
+      selectedMood = "Happy 😊";
+    });
+
+    Future.delayed(
+      const Duration(milliseconds: 1200),
+          () => mounted ? setState(() => _isAnalyzingMood = false) : null,
+    );
   }
 
+  // ---------------- UI ----------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: bg,
+      resizeToAvoidBottomInset: true,
       extendBodyBehindAppBar: true,
+
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -148,431 +112,558 @@ class _AddNotePageState extends State<AddNotePage> with SingleTickerProviderStat
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: surfaceColor.withOpacity(0.8),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.1),
-                width: 1,
-              ),
+              color: surfaceLight.withOpacity(0.6),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
             ),
-            child: const Icon(Icons.arrow_back_ios_new, size: 16, color: Colors.white),
+            child: const Icon(Icons.arrow_back_ios_new, size: 18),
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          "New Note",
-          style: TextStyle(
-            fontFamily: 'Caveat',
-            fontSize: 26,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
+        title: ShaderMask(
+          shaderCallback: (bounds) => LinearGradient(
+            colors: [primary, accent],
+          ).createShader(bounds),
+          child: const Text(
+            "New Note",
+            style: TextStyle(
+              fontFamily: "Caveat",
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
         ),
         actions: [
           Container(
-            margin: const EdgeInsets.only(right: 12),
-            child: IconButton(
-              icon: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [primaryColor, secondaryColor],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: secondaryColor.withOpacity(0.4),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: const Icon(Icons.music_note, size: 20, color: Colors.white),
+            margin: const EdgeInsets.only(right: 16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [primary, accent],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: primary.withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.music_note_rounded, size: 22),
               onPressed: () async {
-                final NoteSong? song = await Navigator.push(
+                final song = await Navigator.push<NoteSong>(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const SongSearchPage(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const SongSearchPage()),
                 );
-
                 if (song != null) {
-                  setState(() {
-                    _songs.add(song);
-                  });
+                  setState(() => _songs.add(song));
                 }
               },
             ),
           ),
         ],
       ),
+
       body: Stack(
         children: [
-          // Animated gradient background
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 800),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  backgroundColor,
-                  _getMoodColor().withOpacity(0.05),
-                  backgroundColor,
-                ],
+          // Gradient Background Effect
+          Positioned(
+            top: -100,
+            right: -100,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    primary.withOpacity(0.15),
+                    Colors.transparent,
+                  ],
+                ),
               ),
             ),
           ),
 
           FadeTransition(
-            opacity: _fadeAnimation,
+            opacity: _fadeCtrl,
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 child: Column(
                   children: [
-                    // Auto-detected mood indicator
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 400),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            _getMoodColor().withOpacity(0.2),
-                            _getMoodColor().withOpacity(0.1),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: _getMoodColor().withOpacity(0.3),
-                          width: 1.5,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _getMoodColor().withOpacity(0.2),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (_isAnalyzingMood)
-                            SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation(_getMoodColor()),
-                              ),
-                            )
-                          else
-                            Icon(
-                              Icons.auto_awesome,
-                              color: _getMoodColor(),
-                              size: 20,
-                            ),
-                          const SizedBox(width: 10),
-                          Text(
-                            _isAnalyzingMood ? "Detecting mood..." : "Mood: $selectedMood",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
+                    const SizedBox(height: 8),
+                    _modernMoodChip(),
                     const SizedBox(height: 24),
-
-                    // Title field
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: surfaceColor.withOpacity(0.6),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.08),
-                          width: 1,
-                        ),
-                      ),
-                      child: TextField(
-                        controller: titleCtrl,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.3,
-                        ),
-                        decoration: const InputDecoration(
-                          hintText: "Title",
-                          hintStyle: TextStyle(
-                            color: Colors.white24,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(vertical: 16),
-                        ),
-                      ),
-                    ),
-
+                    _modernTitleField(),
                     const SizedBox(height: 16),
-
-                    // Content field
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: surfaceColor.withOpacity(0.4),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.06),
-                            width: 1,
-                          ),
-                        ),
-                        child: TextField(
-                          controller: contentCtrl,
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 16,
-                            height: 1.6,
-                            letterSpacing: 0.2,
-                          ),
-                          decoration: const InputDecoration(
-                            hintText: "Start writing... Your mood will be detected automatically ✨",
-                            hintStyle: TextStyle(
-                              color: Colors.white24,
-                              fontSize: 16,
-                            ),
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                          maxLines: null,
-                          expands: true,
-                          textAlignVertical: TextAlignVertical.top,
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Songs list - Instagram style
-                    if (_songs.isNotEmpty)
-                      Container(
-                        constraints: const BoxConstraints(maxHeight: 220),
-                        child: ListView.builder(
-                          shrinkWrap: true,
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: _songs.length,
-                          itemBuilder: (context, index) {
-                            final song = _songs[index];
-
-                            return TweenAnimationBuilder<double>(
-                              duration: Duration(milliseconds: 400 + (index * 80)),
-                              tween: Tween(begin: 0.0, end: 1.0),
-                              curve: Curves.easeOutCubic,
-                              builder: (context, value, child) {
-                                return Transform.translate(
-                                  offset: Offset(0, 20 * (1 - value)),
-                                  child: Opacity(
-                                    opacity: value,
-                                    child: child,
-                                  ),
-                                );
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      surfaceColor.withOpacity(0.8),
-                                      surfaceColor.withOpacity(0.6),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: primaryColor.withOpacity(0.2),
-                                    width: 1,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  children: [
-                                    // Album art placeholder (Instagram style)
-                                    Container(
-                                      width: 50,
-                                      height: 50,
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            primaryColor,
-                                            secondaryColor,
-                                            accentColor,
-                                          ],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        ),
-                                        borderRadius: BorderRadius.circular(12),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: primaryColor.withOpacity(0.3),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: const Icon(
-                                        Icons.music_note,
-                                        color: Colors.white,
-                                        size: 24,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 14),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            song.title,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 15,
-                                              letterSpacing: 0.2,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Row(
-                                            children: [
-                                              Text(
-                                                song.artist,
-                                                style: TextStyle(
-                                                  color: Colors.white.withOpacity(0.6),
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                              Container(
-                                                margin: const EdgeInsets.symmetric(horizontal: 6),
-                                                width: 3,
-                                                height: 3,
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white.withOpacity(0.4),
-                                                  shape: BoxShape.circle,
-                                                ),
-                                              ),
-                                              Text(
-                                                '${song.duration}s',
-                                                style: TextStyle(
-                                                  color: Colors.white.withOpacity(0.5),
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: Container(
-                                        padding: const EdgeInsets.all(6),
-                                        decoration: BoxDecoration(
-                                          color: Colors.red.withOpacity(0.15),
-                                          borderRadius: BorderRadius.circular(10),
-                                        ),
-                                        child: const Icon(
-                                          Icons.close_rounded,
-                                          color: Color(0xFFEF4444),
-                                          size: 18,
-                                        ),
-                                      ),
-                                      onPressed: () {
-                                        setState(() {
-                                          _songs.removeAt(index);
-                                        });
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-
-                    if (_songs.isNotEmpty) const SizedBox(height: 16),
-
-                    // Save button
-                    Container(
-                      width: double.infinity,
-                      height: 58,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            primaryColor,
-                            secondaryColor,
-                          ],
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                        ),
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: [
-                          BoxShadow(
-                            color: primaryColor.withOpacity(0.4),
-                            blurRadius: 16,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: ElevatedButton(
-                        onPressed: saveNote,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.check_circle_outline, size: 24),
-                            SizedBox(width: 10),
-                            Text(
-                              "Save Note",
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    Expanded(child: _modernContentField()),
+                    const SizedBox(height: 20),
+                    _modernSaveButton(),
+                    const SizedBox(height: 12),
                   ],
                 ),
               ),
             ),
           ),
         ],
+      ),
+
+      bottomNavigationBar: _songs.isEmpty
+          ? null
+          : _FloatingSongDock(
+        songs: _songs,
+        onRemove: (i) => setState(() => _songs.removeAt(i)),
+      ),
+    );
+  }
+
+  Widget _modernMoodChip() {
+    return AnimatedBuilder(
+      animation: _pulseCtrl,
+      builder: (context, child) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                surfaceLight.withOpacity(0.8),
+                surface.withOpacity(0.6),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: _isAnalyzingMood
+                  ? primary.withOpacity(0.3 + _pulseCtrl.value * 0.3)
+                  : Colors.white.withOpacity(0.1),
+              width: 1.5,
+            ),
+            boxShadow: [
+              if (_isAnalyzingMood)
+                BoxShadow(
+                  color: primary.withOpacity(0.2 + _pulseCtrl.value * 0.2),
+                  blurRadius: 16,
+                  spreadRadius: 2,
+                ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_isAnalyzingMood)
+                Container(
+                  width: 20,
+                  height: 20,
+                  padding: const EdgeInsets.all(3),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation(primary),
+                  ),
+                )
+              else
+                ShaderMask(
+                  shaderCallback: (bounds) => LinearGradient(
+                    colors: [primary, accent],
+                  ).createShader(bounds),
+                  child: const Icon(
+                    Icons.auto_awesome_rounded,
+                    size: 20,
+                    color: Colors.white,
+                  ),
+                ),
+              const SizedBox(width: 10),
+              Text(
+                "Mood: $selectedMood",
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _modernTitleField() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            surfaceLight.withOpacity(0.5),
+            surface.withOpacity(0.3),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: titleCtrl,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 24,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.2,
+        ),
+        decoration: InputDecoration(
+          hintText: "Title",
+          hintStyle: TextStyle(
+            color: Colors.white.withOpacity(0.3),
+            fontWeight: FontWeight.w500,
+          ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 16),
+        ),
+      ),
+    );
+  }
+
+  Widget _modernContentField() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            surfaceLight.withOpacity(0.4),
+            surface.withOpacity(0.2),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: contentCtrl,
+        maxLines: null,
+        expands: true,
+        textAlignVertical: TextAlignVertical.top,
+        style: const TextStyle(
+          color: Colors.white70,
+          fontSize: 17,
+          height: 1.6,
+          letterSpacing: 0.2,
+        ),
+        decoration: InputDecoration(
+          hintText: "Start writing your thoughts...",
+          hintStyle: TextStyle(
+            color: Colors.white.withOpacity(0.25),
+            fontSize: 17,
+          ),
+          border: InputBorder.none,
+        ),
+      ),
+    );
+  }
+
+  Widget _modernSaveButton() {
+    return Container(
+      width: double.infinity,
+      height: 58,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [primary, accent],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: primary.withOpacity(0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: saveNote,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.check_circle_rounded, size: 24),
+            const SizedBox(width: 10),
+            const Text(
+              "Save Note",
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// ===================================================================
+/// 🔥 MODERN FLOATING SONG DOCK
+/// ===================================================================
+class _FloatingSongDock extends StatefulWidget {
+  final List<NoteSong> songs;
+  final Function(int) onRemove;
+
+  const _FloatingSongDock({
+    required this.songs,
+    required this.onRemove,
+  });
+
+  @override
+  State<_FloatingSongDock> createState() => _FloatingSongDockState();
+}
+
+class _FloatingSongDockState extends State<_FloatingSongDock>
+    with SingleTickerProviderStateMixin {
+  bool expanded = false;
+  late AnimationController progressCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    progressCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 30),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    progressCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dismissible(
+      key: const ValueKey("song_dock"),
+      direction: DismissDirection.down,
+      onDismissed: (_) => setState(() => widget.songs.clear()),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
+        height: expanded ? 180 : 96,
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              const Color(0xFF1E293B),
+              const Color(0xFF151B2E),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.4),
+              blurRadius: 30,
+              offset: const Offset(0, 10),
+              spreadRadius: -5,
+            ),
+            BoxShadow(
+              color: const Color(0xFF6366F1).withOpacity(0.2),
+              blurRadius: 20,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: Column(
+            children: [
+              GestureDetector(
+                onTap: () => setState(() => expanded = !expanded),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  color: Colors.transparent,
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.music_note_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.songs.length == 1
+                                      ? widget.songs[0].title
+                                      : "${widget.songs.length} songs attached",
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                if (widget.songs.length > 1)
+                                  Text(
+                                    widget.songs.map((s) => s.title).join(" • "),
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.5),
+                                      fontSize: 13,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            expanded
+                                ? Icons.keyboard_arrow_down_rounded
+                                : Icons.keyboard_arrow_up_rounded,
+                            color: Colors.white.withOpacity(0.6),
+                          ),
+                        ],
+                      ),
+                      if (!expanded) ...[
+                        const SizedBox(height: 12),
+                        AnimatedBuilder(
+                          animation: progressCtrl,
+                          builder: (_, __) => ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: progressCtrl.value,
+                              minHeight: 4,
+                              backgroundColor: Colors.white.withOpacity(0.1),
+                              valueColor: const AlwaysStoppedAnimation(
+                                Color(0xFF6366F1),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              if (expanded) ...[
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: Colors.white.withOpacity(0.1),
+                ),
+                Expanded(
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: widget.songs.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, i) {
+                      final s = widget.songs[i];
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.music_note_rounded,
+                              color: Colors.white.withOpacity(0.7),
+                              size: 20,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                s.title,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(
+                                Icons.close_rounded,
+                                size: 20,
+                                color: Colors.white.withOpacity(0.6),
+                              ),
+                              onPressed: () => widget.onRemove(i),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                  child: AnimatedBuilder(
+                    animation: progressCtrl,
+                    builder: (_, __) => ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: progressCtrl.value,
+                        minHeight: 4,
+                        backgroundColor: Colors.white.withOpacity(0.1),
+                        valueColor: const AlwaysStoppedAnimation(
+                          Color(0xFF6366F1),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

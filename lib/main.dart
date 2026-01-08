@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'splash_page.dart';
 import 'home_page.dart';
+import 'auth/google_login_page.dart';
 import 'models/note_model.dart';
 import 'models/note_song.dart';
 import 'storage/hive_boxes.dart';
@@ -10,10 +13,13 @@ import 'storage/hive_boxes.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 🔐 Initialize Hive
+  // 🔥 Initialize Firebase
+  await Firebase.initializeApp();
+
+  // 🗄 Initialize Hive
   await Hive.initFlutter();
 
-  // 🔐 Register adapters safely (VERY IMPORTANT)
+  // 🔐 Register Hive adapters
   if (!Hive.isAdapterRegistered(0)) {
     Hive.registerAdapter(NoteModelAdapter());
   }
@@ -57,11 +63,36 @@ class SoulNoteApp extends StatelessWidget {
 
       themeMode: ThemeMode.system,
 
-      // 🗺 ROUTES
-      initialRoute: '/splash',
-      routes: {
-        '/splash': (context) => const SplashPage(),
-        '/home': (context) => const HomePage(),
+      // ✅ START FROM SPLASH
+      home: const SplashPage(),
+    );
+  }
+}
+
+/// 🔐 SINGLE SOURCE OF TRUTH FOR AUTH
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        // ⏳ Loading
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            backgroundColor: Colors.black,
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        // ✅ Logged in
+        if (snapshot.hasData) {
+          return const HomePage();
+        }
+
+        // ❌ Not logged in
+        return const GoogleLoginPage();
       },
     );
   }

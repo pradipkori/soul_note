@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.pradip.soul_note">
+    <!-- ✅ REQUIRED FOR EMAILJS / API CALLS -->
+    <uses-permission android:name="android.permission.INTERNET"/>
 
     <application
         android:label="soul_note"
