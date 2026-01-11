@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
-import 'models/note_model.dart';
-import 'models/note_song.dart';
+import 'package:soul_note/models/note_model.dart';
+import 'package:soul_note/models/note_song.dart';
 import 'song_search_page.dart';
 import 'services/shared_note_service.dart';
+import 'services/cloud_sync_service.dart';
+
 
 class EditNotePage extends StatefulWidget {
   final NoteModel note;
@@ -41,12 +42,26 @@ class _EditNotePageState extends State<EditNotePage> {
   }
 
   // ✅ EXISTING UPDATE LOGIC (UNCHANGED)
-  void updateNote() {
+  // 🔁 UPDATE NOTE (LOCAL + CLOUD)
+  Future<void> updateNote() async {
+    // 1️⃣ Update local note
     widget.note.title = titleCtrl.text;
     widget.note.content = contentCtrl.text;
-    widget.note.save();
+
+    await widget.note.save();
+
+    // 2️⃣ Update cloud note
+    try {
+      await CloudSyncService.updateNote(widget.note as NoteModel);
+    } catch (e) {
+      debugPrint("❌ Cloud update failed: $e");
+    }
+
+    if (!mounted) return;
+
     Navigator.pop(context);
   }
+
 
   // 🤝 NEW: SHARE NOTE (COLLABORATION)
   Future<void> shareNote() async {
@@ -107,8 +122,13 @@ class _EditNotePageState extends State<EditNotePage> {
                 setState(() {
                   widget.note.songs.add(song);
                 });
-                widget.note.save();
+
+                await widget.note.save();
+
+                // 🔁 Sync song change to cloud
+                await CloudSyncService.updateNote(widget.note);
               }
+
             },
           ),
         ],
@@ -176,12 +196,17 @@ class _EditNotePageState extends State<EditNotePage> {
                             Icons.delete,
                             color: Colors.redAccent,
                           ),
-                          onPressed: () {
+                          onPressed: () async {
                             setState(() {
                               widget.note.songs.removeAt(index);
                             });
-                            widget.note.save(); // 🔥 persist deletion
+
+                            await widget.note.save();
+
+                            // 🔁 Sync song removal to cloud
+                            await CloudSyncService.updateNote(widget.note);
                           },
+
                         ),
                       ),
                     );

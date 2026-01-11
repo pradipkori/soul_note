@@ -350,8 +350,17 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                       },
                     );
                   },
-                  onDismissed: (direction) {
-                    box.deleteAt(noteIndex);
+                  onDismissed: (direction) async {
+                    final noteId = note.id;
+
+                    // 1️⃣ Delete from local (Hive)
+                    await box.deleteAt(noteIndex);
+
+                    // 2️⃣ Delete from cloud (Firestore)
+                    await CloudSyncService.deleteNote(noteId);
+
+                    if (!context.mounted) return;
+
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: const Text("Note deleted"),
@@ -360,6 +369,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                       ),
                     );
                   },
+
                   child: GestureDetector(
                     onTap: () {
                       Navigator.push(

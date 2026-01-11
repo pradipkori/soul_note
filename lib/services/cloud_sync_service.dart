@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:soul_note/models/note_model.dart';
+import 'package:soul_note/models/note_song.dart';
 import 'package:soul_note/storage/hive_boxes.dart';
 
 class CloudSyncService {
@@ -9,14 +10,11 @@ class CloudSyncService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // =========================
-  // 🔼 UPLOAD NOTE (OWNER)
+  // 🔼 UPLOAD NOTE (CREATE)
   // =========================
   static Future<void> uploadNote(NoteModel note) async {
     final user = _auth.currentUser;
-
-    if (user == null) {
-      throw Exception("User not logged in");
-    }
+    if (user == null) throw Exception("User not logged in");
 
     await _firestore.collection('notes').doc(note.id).set({
       'id': note.id,
@@ -28,12 +26,71 @@ class CloudSyncService {
       'writingDuration': note.writingDuration,
       'ownerId': user.uid,
       'isShared': note.isShared,
-      'collaborators': {
-        user.uid: true, // owner is always collaborator
-      },
+      'collaborators': {user.uid: true},
+
+      // 🎵 SONGS (MATCH NoteSong MODEL)
+      'songs': note.songs.map((song) => {
+        'title': song.title,
+        'artist': song.artist,
+        'previewUrl': song.previewUrl,
+        'startSecond': song.startSecond,
+        'duration': song.duration,
+      }).toList(),
+
     }, SetOptions(merge: true));
 
     debugPrint("☁️ Uploaded note ${note.id}");
+  }
+
+  // =========================
+  // 🗑️ DELETE NOTE (OWNER)
+  // =========================
+  static Future<void> deleteNote(String noteId) async {
+    final user = _auth.currentUser;
+
+    if (user == null) {
+      debugPrint("❌ Delete aborted: user is null");
+      return;
+    }
+
+    await _firestore
+        .collection('notes')
+        .doc(noteId)
+        .delete();
+
+    debugPrint("🗑️ Deleted note from cloud: $noteId");
+  }
+
+  // =========================
+  // ✏️ UPDATE NOTE (TWO-WAY SYNC)
+  // =========================
+  static Future<void> updateNote(NoteModel note) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      debugPrint("❌ Update aborted: user is null");
+      return;
+    }
+
+    await _firestore.collection('notes').doc(note.id).set({
+      'title': note.title,
+      'content': note.content,
+      'timeOfDay': note.timeOfDay,
+      'mood': note.mood,
+      'writingDuration': note.writingDuration,
+      'updatedAt': DateTime.now().toIso8601String(),
+
+      // 🎵 UPDATE SONGS
+      'songs': note.songs.map((song) => {
+        'title': song.title,
+        'artist': song.artist,
+        'previewUrl': song.previewUrl,
+        'startSecond': song.startSecond,
+        'duration': song.duration,
+      }).toList(),
+
+    }, SetOptions(merge: true));
+
+    debugPrint("✏️ Updated note in cloud: ${note.id}");
   }
 
   // =========================
@@ -41,7 +98,6 @@ class CloudSyncService {
   // =========================
   static Future<void> restoreNotesFromCloud() async {
     final user = _auth.currentUser;
-
     if (user == null) {
       debugPrint("❌ Restore aborted: user is null");
       return;
@@ -49,7 +105,6 @@ class CloudSyncService {
 
     debugPrint("🔄 Restore started for uid: ${user.uid}");
 
-    // ✅ RELIABLE QUERY (OWNER-BASED)
     final snapshot = await _firestore
         .collection('notes')
         .where('ownerId', isEqualTo: user.uid)
@@ -61,37 +116,35 @@ class CloudSyncService {
 
     for (final doc in snapshot.docs) {
       final data = doc.data();
+      final List songsData = data['songs'] ?? [];
 
       final note = NoteModel(
-        id: (data['id'] ?? doc.id).toString(),
-        title: (data['title'] ?? '').toString(),
-        content: (data['content'] ?? '').toString(),
-        createdAt: DateTime.tryParse(
-          (data['createdAt'] ?? '').toString(),
-        ) ??
-            DateTime.now(),
+        id: data['id'],
+        title: data['title'] ?? '',
+        content: data['content'] ?? '',
+        createdAt: DateTime.parse(data['createdAt']),
+        timeOfDay: data['timeOfDay'] ?? '',
+        mood: data['mood'] ?? '',
+        writingDuration: data['writingDuration'] ?? 0,
+        isShared: data['isShared'] ?? false,
+        ownerId: data['ownerId'] ?? '',
 
-        timeOfDay: (data['timeOfDay'] ?? '').toString(),
-        mood: (data['mood'] ?? '').toString(),
+        // 🎵 RESTORE SONGS
+        songs: songsData.map((s) => NoteSong(
+          title: s['title'] ?? '',
+          artist: s['artist'] ?? '',
+          previewUrl: s['previewUrl'] ?? '',
+          startSecond: s['startSecond'] ?? 0,
+          duration: s['duration'] ?? 0,
+        )).toList(),
 
-        writingDuration: data['writingDuration'] is int
-            ? data['writingDuration']
-            : 0,
-
-        isShared: data['isShared'] == true,
-        ownerId: (data['ownerId'] ?? '').toString(),
-        songs: const [],
       );
 
-
-      final exists =
-      box.values.any((existing) => existing.id == note.id);
+      final exists = box.values.any((n) => n.id == note.id);
 
       if (!exists) {
         await box.add(note);
         debugPrint("✅ Restored note ${note.id}");
-      } else {
-        debugPrint("⚠️ Note already exists ${note.id}");
       }
     }
 
