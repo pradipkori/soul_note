@@ -5,6 +5,8 @@ import 'package:soul_note/models/note_song.dart';
 import 'package:soul_note/storage/hive_boxes.dart';
 import 'package:soul_note/utils/soul_moment_utils.dart';
 import 'package:soul_note/song_search_page.dart';
+import 'package:soul_note/services/cloud_sync_service.dart';
+
 
 class AddNotePage extends StatefulWidget {
   const AddNotePage({super.key});
@@ -34,6 +36,42 @@ class _AddNotePageState extends State<AddNotePage>
   final Color primary = const Color(0xFF6366F1);
   final Color accent = const Color(0xFF8B5CF6);
 
+  // ---------------- SAVE NOTE ----------------
+  Future<void> saveNote() async {
+    final duration = DateTime.now().difference(startTime!).inSeconds;
+
+    final uniqueId =
+        '${DateTime.now().millisecondsSinceEpoch}_${DateTime.now().microsecond}';
+
+    final note = NoteModel(
+      id: uniqueId,
+      title: titleCtrl.text.trim().isNotEmpty
+          ? titleCtrl.text.trim()
+          : "Untitled",
+      content: contentCtrl.text.trim(),
+      createdAt: DateTime.now(),
+      timeOfDay: getTimeOfDay(DateTime.now()),
+      mood: selectedMood,
+      writingDuration: duration,
+      songs: List.from(_songs),
+    );
+
+    // 1️⃣ SAVE LOCALLY (OFFLINE)
+    await HiveBoxes.getNotesBox().add(note);
+
+    // 2️⃣ UPLOAD TO FIRESTORE (CLOUD BACKUP)
+    try {
+      await CloudSyncService.uploadNote(note);
+    } catch (e) {
+      debugPrint("❌ Firestore upload failed: $e");
+      // Do NOT block user if cloud fails
+    }
+
+    // 3️⃣ CLOSE PAGE
+    if (mounted) Navigator.pop(context);
+  }
+
+
   @override
   void initState() {
     super.initState();
@@ -59,29 +97,6 @@ class _AddNotePageState extends State<AddNotePage>
     _fadeCtrl.dispose();
     _pulseCtrl.dispose();
     super.dispose();
-  }
-
-  // ---------------- SAVE NOTE ----------------
-  void saveNote() {
-    final duration = DateTime.now().difference(startTime!).inSeconds;
-
-    // ✅ Generate unique ID using timestamp + random component
-    final uniqueId = '${DateTime.now().millisecondsSinceEpoch}_${DateTime.now().microsecond}';
-
-    HiveBoxes.getNotesBox().add(
-      NoteModel(
-        id: uniqueId, // ✅ FIXED: Generate proper unique ID
-        title: titleCtrl.text.trim().isNotEmpty ? titleCtrl.text.trim() : "Untitled",
-        content: contentCtrl.text.trim(),
-        createdAt: DateTime.now(),
-        timeOfDay: getTimeOfDay(DateTime.now()),
-        mood: selectedMood,
-        writingDuration: duration,
-        songs: List.from(_songs),
-      ),
-    );
-
-    Navigator.pop(context);
   }
 
   // ---------------- MOOD ----------------

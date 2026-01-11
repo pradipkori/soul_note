@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:soul_note/services/collaboration_test_service.dart';
 import 'package:soul_note/services/firestore_test_service.dart';
+import 'package:soul_note/services/cloud_sync_service.dart';
 import 'models/note_model.dart';
 import 'storage/hive_boxes.dart';
 import 'add_note_page.dart';
 import 'view_note_page.dart';
 import 'services/auth_service.dart';
 import 'auth/google_login_page.dart';
+
 
 
 class HomePage extends StatefulWidget {
@@ -18,6 +20,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
+  bool _restoredFromCloud = false;
+  bool _restoring = true;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool _isSearching = false;
@@ -26,15 +30,41 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   @override
   void initState() {
     super.initState();
+
     _fabController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
     _fabController.forward();
 
-    // ✅ Fix existing notes with empty IDs
     _fixExistingNoteIds();
+    Future<void> _restoreNotesFromCloud() async {
+      debugPrint('☁️ HomePage: restoring notes from cloud...');
+
+      try {
+        await CloudSyncService.restoreNotesFromCloud();
+        debugPrint(
+          '✅ Cloud restore finished. Hive count: ${HiveBoxes.getNotesBox().length}',
+        );
+      } catch (e) {
+        debugPrint('❌ Cloud restore failed: $e');
+      }
+
+      if (mounted) {
+        setState(() {
+          _restoring = false;
+        });
+      }
+    }
+
+
+    if (!_restoredFromCloud) {
+      _restoredFromCloud = true;
+      _restoreNotesFromCloud();
+    }
   }
+
+
 
   @override
   void dispose() {
@@ -61,7 +91,16 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
+    if (_restoring) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     final box = HiveBoxes.getNotesBox();
+
 
     return Scaffold(
       backgroundColor: Colors.black,

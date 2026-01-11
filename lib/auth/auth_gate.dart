@@ -18,7 +18,7 @@ class AuthGate extends StatelessWidget {
         }
 
         if (snapshot.hasData) {
-          return const HomePage();
+          return const HomePage(); // 🔥 ONLY ROUTING
         }
 
         return const LoginPage();
