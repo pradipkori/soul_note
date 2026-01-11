@@ -6,25 +6,34 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'splash_page.dart';
 import 'home_page.dart';
 import 'auth/google_login_page.dart';
+
 import 'models/note_model.dart';
 import 'models/note_song.dart';
 import 'storage/hive_boxes.dart';
+import 'firebase_options.dart';
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 🔥 Initialize Firebase
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+  options: DefaultFirebaseOptions.currentPlatform,
+  );
+
 
   // 🗄 Initialize Hive
   await Hive.initFlutter();
 
-  // 🔐 Register Hive adapters
+  // 🔐 Register Hive adapters (ORDER & TYPEID SAFE)
   if (!Hive.isAdapterRegistered(0)) {
     Hive.registerAdapter(NoteModelAdapter());
   }
   if (!Hive.isAdapterRegistered(1)) {
     Hive.registerAdapter(NoteSongAdapter());
+  }
+  if (!Hive.isAdapterRegistered(2)) {
+    Hive.registerAdapter(CollaboratorAdapter());
   }
 
   // 📦 Open notes box

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:soul_note/services/collaboration_test_service.dart';
+import 'package:soul_note/services/firestore_test_service.dart';
 import 'models/note_model.dart';
 import 'storage/hive_boxes.dart';
 import 'add_note_page.dart';
@@ -29,6 +31,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       duration: const Duration(milliseconds: 300),
     );
     _fabController.forward();
+
+    // ✅ Fix existing notes with empty IDs
+    _fixExistingNoteIds();
   }
 
   @override
@@ -36,6 +41,22 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     _searchController.dispose();
     _fabController.dispose();
     super.dispose();
+  }
+
+  // ✅ NEW METHOD: Fix all existing notes with empty IDs
+  Future<void> _fixExistingNoteIds() async {
+    final box = HiveBoxes.getNotesBox();
+
+    for (int i = 0; i < box.length; i++) {
+      final note = box.getAt(i) as NoteModel;
+
+      if (note.id.isEmpty) {
+        // Generate new unique ID
+        note.id = '${DateTime.now().millisecondsSinceEpoch}_fix_${i}_${DateTime.now().microsecond}';
+        await note.save();
+        debugPrint('✅ Fixed note at index $i with new ID: ${note.id}');
+      }
+    }
   }
 
   @override
@@ -73,7 +94,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           ),
         ),
         actions: [
-          // 🔍 SEARCH BUTTON (UNCHANGED)
+          // 🔍 SEARCH BUTTON
           IconButton(
             icon: Icon(_isSearching ? Icons.close : Icons.search),
             onPressed: () {
@@ -86,8 +107,51 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               });
             },
           ),
+          // ☁️ FIRESTORE TEST BUTTON
+          IconButton(
+            icon: const Icon(Icons.cloud_upload),
+            tooltip: "Write test note to Firestore",
+            onPressed: () async {
+              await FirestoreTestService.writeTestNote();
 
-          // 🚪 LOGOUT BUTTON (NEW)
+              if (!context.mounted) return;
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Written to Firestore'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+          // 👥 TEST COLLABORATOR BUTTON
+          IconButton(
+            icon: const Icon(Icons.people),
+            tooltip: "Test Collaborator",
+            onPressed: () async {
+              try {
+                const testNoteId = 'FwGzlVAbqe3IGwMs97Q6';
+
+                await CollaborationTestService.addTestCollaborator(
+                  noteId: testNoteId,
+                  collaboratorEmail: 'pradipkorii2005@gmail.com',
+                );
+
+                if (!context.mounted) return;
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Collaborator added")),
+                );
+              } catch (e) {
+                if (!context.mounted) return;
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(e.toString())),
+                );
+              }
+            },
+          ),
+          // 🚪 LOGOUT BUTTON
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: "Logout",
@@ -107,7 +171,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             },
           ),
         ],
-
       ),
       body: ValueListenableBuilder<Box<NoteModel>>(
         valueListenable: box.listenable(),
@@ -422,7 +485,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         ),
       ),
     );
-
   }
 
   String _formatDate(DateTime date) {

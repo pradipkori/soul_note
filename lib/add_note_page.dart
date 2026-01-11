@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 
-import 'models/note_model.dart';
-import 'models/note_song.dart';
-import 'storage/hive_boxes.dart';
-import 'utils/soul_moment_utils.dart';
-import 'song_search_page.dart';
+import 'package:soul_note/models/note_model.dart';
+import 'package:soul_note/models/note_song.dart';
+import 'package:soul_note/storage/hive_boxes.dart';
+import 'package:soul_note/utils/soul_moment_utils.dart';
+import 'package:soul_note/song_search_page.dart';
 
 class AddNotePage extends StatefulWidget {
   const AddNotePage({super.key});
@@ -66,9 +65,13 @@ class _AddNotePageState extends State<AddNotePage>
   void saveNote() {
     final duration = DateTime.now().difference(startTime!).inSeconds;
 
+    // ✅ Generate unique ID using timestamp + random component
+    final uniqueId = '${DateTime.now().millisecondsSinceEpoch}_${DateTime.now().microsecond}';
+
     HiveBoxes.getNotesBox().add(
       NoteModel(
-        title: titleCtrl.text.trim().isEmpty ? "Untitled" : titleCtrl.text.trim(),
+        id: uniqueId, // ✅ FIXED: Generate proper unique ID
+        title: titleCtrl.text.trim().isNotEmpty ? titleCtrl.text.trim() : "Untitled",
         content: contentCtrl.text.trim(),
         createdAt: DateTime.now(),
         timeOfDay: getTimeOfDay(DateTime.now()),
@@ -408,12 +411,12 @@ class _AddNotePageState extends State<AddNotePage>
             borderRadius: BorderRadius.circular(18),
           ),
         ),
-        child: Row(
+        child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.check_circle_rounded, size: 24),
-            const SizedBox(width: 10),
-            const Text(
+            Icon(Icons.check_circle_rounded, size: 24),
+            SizedBox(width: 10),
+            Text(
               "Save Note",
               style: TextStyle(
                 fontSize: 17,
@@ -476,10 +479,10 @@ class _FloatingSongDockState extends State<_FloatingSongDock>
         height: expanded ? 180 : 96,
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
+          gradient: const LinearGradient(
             colors: [
-              const Color(0xFF1E293B),
-              const Color(0xFF151B2E),
+              Color(0xFF1E293B),
+              Color(0xFF151B2E),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,

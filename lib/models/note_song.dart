@@ -1,10 +1,22 @@
 import 'package:hive/hive.dart';
 
-class NoteSong {
+part 'note_song.g.dart';
+
+@HiveType(typeId: 1)
+class NoteSong extends HiveObject {
+  @HiveField(0)
   String title;
+
+  @HiveField(1)
   String artist;
+
+  @HiveField(2)
   String previewUrl;
+
+  @HiveField(3)
   int startSecond;
+
+  @HiveField(4)
   int duration;
 
   NoteSong({
@@ -14,30 +26,26 @@ class NoteSong {
     required this.startSecond,
     required this.duration,
   });
-}
 
-class NoteSongAdapter extends TypeAdapter<NoteSong> {
-  @override
-  final int typeId = 1;
-
-  @override
-  NoteSong read(BinaryReader reader) {
-    return NoteSong(
-      title: reader.readString(),
-      artist: reader.readString(),
-      previewUrl: reader.readString(),
-      startSecond: reader.readInt(),
-      duration: reader.readInt(),
-    );
+  // 🔄 Convert to Map (for Firestore)
+  Map<String, dynamic> toMap() {
+    return {
+      'title': title,
+      'artist': artist,
+      'previewUrl': previewUrl,
+      'startSecond': startSecond,
+      'duration': duration,
+    };
   }
 
-  @override
-  void write(BinaryWriter writer, NoteSong obj) {
-    writer
-      ..writeString(obj.title)
-      ..writeString(obj.artist)
-      ..writeString(obj.previewUrl)
-      ..writeInt(obj.startSecond)
-      ..writeInt(obj.duration);
+  // 🔄 Create from Map (from Firestore)
+  factory NoteSong.fromMap(Map<String, dynamic> map) {
+    return NoteSong(
+      title: map['title'] ?? '',
+      artist: map['artist'] ?? '',
+      previewUrl: map['previewUrl'] ?? '',
+      startSecond: map['startSecond'] ?? 0,
+      duration: map['duration'] ?? 30,
+    );
   }
 }

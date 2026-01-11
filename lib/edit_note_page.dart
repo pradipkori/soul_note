@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import 'models/note_model.dart';
 import 'models/note_song.dart';
 import 'song_search_page.dart';
+import 'services/shared_note_service.dart';
 
 class EditNotePage extends StatefulWidget {
   final NoteModel note;
@@ -21,6 +24,8 @@ class _EditNotePageState extends State<EditNotePage> {
   late final TextEditingController titleCtrl;
   late final TextEditingController contentCtrl;
 
+  final SharedNoteService _sharedService = SharedNoteService();
+
   @override
   void initState() {
     super.initState();
@@ -35,11 +40,37 @@ class _EditNotePageState extends State<EditNotePage> {
     super.dispose();
   }
 
+  // ✅ EXISTING UPDATE LOGIC (UNCHANGED)
   void updateNote() {
     widget.note.title = titleCtrl.text;
     widget.note.content = contentCtrl.text;
     widget.note.save();
     Navigator.pop(context);
+  }
+
+  // 🤝 NEW: SHARE NOTE (COLLABORATION)
+  Future<void> shareNote() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    // Already shared → do nothing
+    if (widget.note.isShared) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Note is already shared")),
+      );
+      return;
+    }
+
+    widget.note.isShared = true;
+    widget.note.ownerId = user.uid;
+
+    await widget.note.save();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Note is now shared")),
+    );
+
+    setState(() {});
   }
 
   @override
@@ -50,7 +81,18 @@ class _EditNotePageState extends State<EditNotePage> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         actions: [
-          // 🎵 ADD SONG
+          // 🤝 COLLABORATOR ICON (NEW)
+          IconButton(
+            icon: Icon(
+              widget.note.isShared ? Icons.group : Icons.group_add,
+              color: Colors.white,
+            ),
+            tooltip:
+            widget.note.isShared ? "Shared note" : "Share note",
+            onPressed: shareNote,
+          ),
+
+          // 🎵 ADD SONG (EXISTING)
           IconButton(
             icon: const Icon(Icons.music_note),
             onPressed: () async {

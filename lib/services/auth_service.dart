@@ -1,67 +1,60 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
-  // 🔵 GOOGLE SIGN IN
+  /// 🔐 Google Sign In
   Future<User?> signInWithGoogle() async {
-    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-    if (googleUser == null) return null;
+    try {
+      // 1️⃣ Trigger Google Sign In
+      final GoogleSignInAccount? googleUser =
+      await _googleSignIn.signIn();
+      if (googleUser == null) return null;
 
-    final GoogleSignInAuthentication googleAuth =
-    await googleUser.authentication;
+      // 2️⃣ Obtain auth details
+      final GoogleSignInAuthentication googleAuth =
+      await googleUser.authentication;
 
-    final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
+      final AuthCredential credential =
+      GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
 
-    final userCredential =
-    await _auth.signInWithCredential(credential);
+      // 3️⃣ Firebase sign in
+      final UserCredential userCredential =
+      await _auth.signInWithCredential(credential);
 
-    return userCredential.user;
+      final User? user = userCredential.user;
+      if (user == null) return null;
+
+      // 🔥 4️⃣ CREATE / UPDATE USER IN FIRESTORE (CRUCIAL STEP)
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set({
+        'uid': user.uid,
+        'email': user.email,
+        'name': user.displayName,
+        'photoUrl': user.photoURL,
+        'lastLogin': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      return user;
+    } catch (e) {
+      rethrow;
+    }
   }
 
-  // 📱 PHONE AUTH - SEND OTP
-  Future<void> sendOtp({
-    required String phoneNumber,
-    required Function(String verificationId) onCodeSent,
-    required Function(String error) onError,
-  }) async {
-    await _auth.verifyPhoneNumber(
-      phoneNumber: phoneNumber,
-      verificationCompleted: (credential) async {
-        await _auth.signInWithCredential(credential);
-      },
-      verificationFailed: (e) => onError(e.message ?? "Verification failed"),
-      codeSent: (verificationId, _) => onCodeSent(verificationId),
-      codeAutoRetrievalTimeout: (_) {},
-    );
-  }
-
-  // 📱 VERIFY OTP
-  Future<User?> verifyOtp({
-    required String verificationId,
-    required String smsCode,
-  }) async {
-    final credential = PhoneAuthProvider.credential(
-      verificationId: verificationId,
-      smsCode: smsCode,
-    );
-
-    final userCredential =
-    await _auth.signInWithCredential(credential);
-
-    return userCredential.user;
-  }
-
-  // 🚪 LOGOUT
+  /// 🚪 Sign Out
   Future<void> signOut() async {
-    await GoogleSignIn().signOut();
+    await _googleSignIn.signOut();
     await _auth.signOut();
   }
 
-  // 👤 CURRENT USER
+  /// 👤 Current User
   User? get currentUser => _auth.currentUser;
 }
