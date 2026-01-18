@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:soul_note/auth/login_success_page.dart';
-import 'package:soul_note/home_page.dart';
 import 'package:soul_note/services/guest_service.dart';
 
-import '../services/auth_service.dart';
+import 'package:soul_note/services/auth_service.dart';
 
 class GoogleLoginPage extends StatefulWidget {
   const GoogleLoginPage({super.key});
@@ -14,7 +13,6 @@ class GoogleLoginPage extends StatefulWidget {
 }
 
 class _GoogleLoginPageState extends State<GoogleLoginPage> {
-  final AuthService _authService = AuthService();
   bool _loading = false;
 
   Future<void> _signInWithGoogle() async {
@@ -33,9 +31,11 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Login failed: $e")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Login failed: $e")),
+        );
+      }
     }
 
     if (mounted) {
@@ -63,7 +63,7 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.white.withOpacity(0.18),
+                        color: Colors.white.withValues(alpha: 0.18),
                         blurRadius: 45,
                         spreadRadius: 18,
                       ),
@@ -96,7 +96,7 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
                   style: TextStyle(
                     fontFamily: "Caveat",
                     fontSize: 22,
-                    color: Colors.white.withOpacity(0.75),
+                    color: Colors.white.withValues(alpha: 0.75),
                   ),
                 ),
 
@@ -109,14 +109,14 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
                     borderRadius: BorderRadius.circular(22),
                     gradient: LinearGradient(
                       colors: [
-                        Colors.white.withOpacity(0.06),
-                        Colors.white.withOpacity(0.02),
+                        Colors.white.withValues(alpha: 0.06),
+                        Colors.white.withValues(alpha: 0.02),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.12),
+                      color: Colors.white.withValues(alpha: 0.12),
                     ),
                   ),
                   child: Column(
@@ -161,7 +161,7 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
                         children: [
                           Expanded(
                             child: Divider(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withValues(alpha: 0.2),
                             ),
                           ),
                           Padding(
@@ -169,13 +169,13 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
                             child: Text(
                               "or",
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.5),
+                               color: Colors.white.withValues(alpha: 0.5),
                               ),
                             ),
                           ),
                           Expanded(
                             child: Divider(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withValues(alpha: 0.2),
                             ),
                           ),
                         ],
@@ -191,9 +191,9 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
                         height: 54,
                         child: OutlinedButton(
                           onPressed: () async {
-                            final guestId = await GuestService.getOrCreateGuestId();
+                            await GuestService.getOrCreateGuestId();
 
-                            if (!mounted) return;
+                            if (!context.mounted) return;
 
                             Navigator.pushReplacement(
                               context,
@@ -225,7 +225,7 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
                   style: TextStyle(
                     fontFamily: "Caveat",
                     fontSize: 18,
-                    color: Colors.white.withOpacity(0.45),
+                    color: Colors.white.withValues(alpha: 0.45),
                   ),
                 ),
               ],

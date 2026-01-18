@@ -1,5 +1,5 @@
 import 'package:hive/hive.dart';
-import '../models/note_model.dart';
+import 'package:soul_note/models/note_model.dart';
 
 class HiveBoxes {
   static const String notesBox = "notesBox";

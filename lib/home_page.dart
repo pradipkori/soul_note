@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:soul_note/services/collaboration_test_service.dart';
-import 'package:soul_note/services/firestore_test_service.dart';
 import 'package:soul_note/services/cloud_sync_service.dart';
-import 'models/note_model.dart';
-import 'storage/hive_boxes.dart';
-import 'add_note_page.dart';
-import 'view_note_page.dart';
-import 'services/auth_service.dart';
-import 'auth/google_login_page.dart';
+import 'package:soul_note/models/note_model.dart';
+import 'package:soul_note/storage/hive_boxes.dart';
+import 'package:soul_note/add_note_page.dart';
+import 'package:soul_note/view_note_page.dart';
+import 'package:soul_note/services/auth_service.dart';
+import 'package:soul_note/auth/google_login_page.dart';
 
 
 
@@ -46,7 +44,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     _fabController.forward();
 
     _fixExistingNoteIds();
-    Future<void> _restoreNotesFromCloud() async {
+    Future<void> restoreNotesFromCloud() async {
       debugPrint('☁️ HomePage: restoring notes from cloud...');
 
       try {
@@ -68,7 +66,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
     if (!_restoredFromCloud) {
       _restoredFromCloud = true;
-      _restoreNotesFromCloud();
+      restoreNotesFromCloud();
     }
   }
 
@@ -155,7 +153,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.2),
+                      color: Colors.orange.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: Colors.orangeAccent,
@@ -235,7 +233,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   Icon(
                     Icons.note_add_outlined,
                     size: 80,
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                   ),
                   const SizedBox(height: 20),
                   const Text(
@@ -312,7 +310,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          Colors.red.shade900.withOpacity(0.8),
+                          Colors.red.shade900.withValues(alpha: 0.8),
                           Colors.red.shade600,
                         ],
                         begin: Alignment.centerLeft,
@@ -321,7 +319,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.red.shade900.withOpacity(0.5),
+                          color: Colors.red.shade900.withValues(alpha: 0.5),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -419,23 +417,23 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [
-                                Colors.deepPurple.shade900.withOpacity(0.3),
-                                Colors.deepPurple.shade700.withOpacity(0.2),
+                                Colors.deepPurple.shade900.withValues(alpha: 0.3),
+                                Colors.deepPurple.shade700.withValues(alpha: 0.2),
                               ],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: Colors.deepPurple.shade300.withOpacity(0.3),
+                              color: Colors.deepPurple.shade300.withValues(alpha: 0.3),
                               width: 1,
                             ),
                             boxShadow: [
-                              BoxShadow(
-                                color: Colors.deepPurple.shade900.withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
+                               BoxShadow(
+                                 color: Colors.deepPurple.shade900.withValues(alpha: 0.3),
+                                 blurRadius: 8,
+                                 offset: const Offset(0, 4),
+                               ),
                             ],
                           ),
                           child: Column(
@@ -459,13 +457,13 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                         padding: const EdgeInsets.only(right: 8),
                                         child: Icon(
                                           Icons.group_outlined,
-                                          color: Colors.deepPurple.shade300.withOpacity(0.6),
+                                          color: Colors.deepPurple.shade300.withValues(alpha: 0.6),
                                           size: 18,
                                         ),
                                       ),
                                     Icon(
                                       Icons.arrow_forward_ios,
-                                      color: Colors.white.withOpacity(0.3),
+                                      color: Colors.white.withValues(alpha: 0.3),
                                       size: 16,
                                     ),
                                 ],
@@ -484,19 +482,19 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                               const SizedBox(height: 12),
                               Row(
                                 children: [
-                                  Icon(
-                                    Icons.access_time,
-                                    size: 14,
-                                    color: Colors.white.withOpacity(0.4),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    _formatDate(note.createdAt),
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.4),
-                                      fontSize: 12,
+                                    Icon(
+                                      Icons.access_time,
+                                      size: 14,
+                                      color: Colors.white.withValues(alpha: 0.4),
                                     ),
-                                  ),
+                                  const SizedBox(width: 6),
+                                    Text(
+                                      _formatDate(note.createdAt),
+                                      style: TextStyle(
+                                        color: Colors.white.withValues(alpha: 0.4),
+                                        fontSize: 12,
+                                      ),
+                                    ),
                                 ],
                               ),
                             ],
@@ -530,12 +528,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               end: Alignment.bottomRight,
             ),
             boxShadow: [
-              BoxShadow(
-                color: Colors.deepPurple.shade400.withOpacity(0.5),
-                blurRadius: 20,
-                spreadRadius: 2,
-                offset: const Offset(0, 8),
-              ),
+                BoxShadow(
+                  color: Colors.deepPurple.shade400.withValues(alpha: 0.5),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 8),
+                ),
             ],
           ),
           child: FloatingActionButton(

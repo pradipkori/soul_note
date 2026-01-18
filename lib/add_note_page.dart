@@ -4,6 +4,8 @@ import 'package:soul_note/models/note_model.dart';
 import 'package:soul_note/models/note_song.dart';
 import 'package:soul_note/storage/hive_boxes.dart';
 import 'package:soul_note/utils/soul_moment_utils.dart';
+import 'package:soul_note/utils/mood_analyzer.dart';
+
 import 'package:soul_note/song_search_page.dart';
 import 'package:soul_note/services/cloud_sync_service.dart';
 
@@ -101,19 +103,24 @@ class _AddNotePageState extends State<AddNotePage>
 
   // ---------------- MOOD ----------------
   void _autoDetectMood() {
-    if (contentCtrl.text.length < 20) return;
-    if (selectedMood != "Calm 🌿") return;
+    final content = contentCtrl.text;
+    if (content.length < 10) return;
 
-    setState(() {
-      _isAnalyzingMood = true;
-      selectedMood = "Happy 😊";
-    });
+    final newMood = MoodAnalyzer.analyzeMood(content);
 
-    Future.delayed(
-      const Duration(milliseconds: 1200),
-          () => mounted ? setState(() => _isAnalyzingMood = false) : null,
-    );
+    if (newMood != selectedMood) {
+      setState(() {
+        _isAnalyzingMood = true;
+        selectedMood = newMood;
+      });
+
+      Future.delayed(
+        const Duration(milliseconds: 1000),
+            () => mounted ? setState(() => _isAnalyzingMood = false) : null,
+      );
+    }
   }
+
 
   // ---------------- UI ----------------
   @override
@@ -130,9 +137,9 @@ class _AddNotePageState extends State<AddNotePage>
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: surfaceLight.withOpacity(0.6),
+              color: surfaceLight.withValues(alpha: 0.6),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
             ),
             child: const Icon(Icons.arrow_back_ios_new, size: 18),
           ),
@@ -164,7 +171,7 @@ class _AddNotePageState extends State<AddNotePage>
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: primary.withOpacity(0.3),
+                  color: primary.withValues(alpha: 0.3),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -199,7 +206,7 @@ class _AddNotePageState extends State<AddNotePage>
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    primary.withOpacity(0.15),
+                    primary.withValues(alpha: 0.15),
                     Colors.transparent,
                   ],
                 ),
@@ -249,21 +256,21 @@ class _AddNotePageState extends State<AddNotePage>
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                surfaceLight.withOpacity(0.8),
-                surface.withOpacity(0.6),
+                surfaceLight.withValues(alpha: 0.8),
+                surface.withValues(alpha: 0.6),
               ],
             ),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: _isAnalyzingMood
-                  ? primary.withOpacity(0.3 + _pulseCtrl.value * 0.3)
-                  : Colors.white.withOpacity(0.1),
+                  ? primary.withValues(alpha: 0.3 + _pulseCtrl.value * 0.3)
+                  : Colors.white.withValues(alpha: 0.1),
               width: 1.5,
             ),
             boxShadow: [
               if (_isAnalyzingMood)
                 BoxShadow(
-                  color: primary.withOpacity(0.2 + _pulseCtrl.value * 0.2),
+                  color: primary.withValues(alpha: 0.2 + _pulseCtrl.value * 0.2),
                   blurRadius: 16,
                   spreadRadius: 2,
                 ),
@@ -316,17 +323,17 @@ class _AddNotePageState extends State<AddNotePage>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            surfaceLight.withOpacity(0.5),
-            surface.withOpacity(0.3),
+            surfaceLight.withValues(alpha: 0.5),
+            surface.withValues(alpha: 0.3),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -343,7 +350,7 @@ class _AddNotePageState extends State<AddNotePage>
         decoration: InputDecoration(
           hintText: "Title",
           hintStyle: TextStyle(
-            color: Colors.white.withOpacity(0.3),
+            color: Colors.white.withValues(alpha: 0.3),
             fontWeight: FontWeight.w500,
           ),
           border: InputBorder.none,
@@ -359,17 +366,17 @@ class _AddNotePageState extends State<AddNotePage>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            surfaceLight.withOpacity(0.4),
-            surface.withOpacity(0.2),
+            surfaceLight.withValues(alpha: 0.4),
+            surface.withValues(alpha: 0.2),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -389,7 +396,7 @@ class _AddNotePageState extends State<AddNotePage>
         decoration: InputDecoration(
           hintText: "Start writing your thoughts...",
           hintStyle: TextStyle(
-            color: Colors.white.withOpacity(0.25),
+            color: Colors.white.withValues(alpha: 0.25),
             fontSize: 17,
           ),
           border: InputBorder.none,
@@ -411,7 +418,7 @@ class _AddNotePageState extends State<AddNotePage>
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: primary.withOpacity(0.4),
+            color: primary.withValues(alpha: 0.4),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -503,16 +510,16 @@ class _FloatingSongDockState extends State<_FloatingSongDock>
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.4),
+              color: Colors.black.withValues(alpha: 0.4),
               blurRadius: 30,
               offset: const Offset(0, 10),
               spreadRadius: -5,
             ),
             BoxShadow(
-              color: const Color(0xFF6366F1).withOpacity(0.2),
+              color: const Color(0xFF6366F1).withValues(alpha: 0.2),
               blurRadius: 20,
               offset: const Offset(0, 5),
             ),
@@ -563,15 +570,15 @@ class _FloatingSongDockState extends State<_FloatingSongDock>
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 if (widget.songs.length > 1)
-                                  Text(
-                                    widget.songs.map((s) => s.title).join(" • "),
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.5),
-                                      fontSize: 13,
+                                    Text(
+                                      widget.songs.map((s) => s.title).join(" • "),
+                                      style: TextStyle(
+                                        color: Colors.white.withValues(alpha: 0.5),
+                                        fontSize: 13,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
                               ],
                             ),
                           ),
@@ -579,7 +586,7 @@ class _FloatingSongDockState extends State<_FloatingSongDock>
                             expanded
                                 ? Icons.keyboard_arrow_down_rounded
                                 : Icons.keyboard_arrow_up_rounded,
-                            color: Colors.white.withOpacity(0.6),
+                            color: Colors.white.withValues(alpha: 0.6),
                           ),
                         ],
                       ),
@@ -592,7 +599,7 @@ class _FloatingSongDockState extends State<_FloatingSongDock>
                             child: LinearProgressIndicator(
                               value: progressCtrl.value,
                               minHeight: 4,
-                              backgroundColor: Colors.white.withOpacity(0.1),
+                              backgroundColor: Colors.white.withValues(alpha: 0.1),
                               valueColor: const AlwaysStoppedAnimation(
                                 Color(0xFF6366F1),
                               ),
@@ -608,7 +615,7 @@ class _FloatingSongDockState extends State<_FloatingSongDock>
                 Divider(
                   height: 1,
                   thickness: 1,
-                  color: Colors.white.withOpacity(0.1),
+                  color: Colors.white.withValues(alpha: 0.1),
                 ),
                 Expanded(
                   child: ListView.separated(
@@ -623,14 +630,14 @@ class _FloatingSongDockState extends State<_FloatingSongDock>
                           vertical: 10,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.05),
+                          color: Colors.white.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
                           children: [
                             Icon(
                               Icons.music_note_rounded,
-                              color: Colors.white.withOpacity(0.7),
+                              color: Colors.white.withValues(alpha: 0.7),
                               size: 20,
                             ),
                             const SizedBox(width: 10),
@@ -649,7 +656,7 @@ class _FloatingSongDockState extends State<_FloatingSongDock>
                               icon: Icon(
                                 Icons.close_rounded,
                                 size: 20,
-                                color: Colors.white.withOpacity(0.6),
+                                color: Colors.white.withValues(alpha: 0.6),
                               ),
                               onPressed: () => widget.onRemove(i),
                               padding: EdgeInsets.zero,
@@ -670,7 +677,7 @@ class _FloatingSongDockState extends State<_FloatingSongDock>
                       child: LinearProgressIndicator(
                         value: progressCtrl.value,
                         minHeight: 4,
-                        backgroundColor: Colors.white.withOpacity(0.1),
+                        backgroundColor: Colors.white.withValues(alpha: 0.1),
                         valueColor: const AlwaysStoppedAnimation(
                           Color(0xFF6366F1),
                         ),

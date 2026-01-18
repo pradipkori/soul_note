@@ -19,6 +19,7 @@ class LoginPage extends StatelessWidget {
 
       await FirebaseAuth.instance.signInWithCredential(credential);
     } catch (e) {
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Google login failed: $e")),
       );

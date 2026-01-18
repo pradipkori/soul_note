@@ -125,7 +125,7 @@ class _SplashPageState extends State<SplashPage>
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Colors.white.withOpacity(0.10),
+                    Colors.white.withValues(alpha: 0.10),
                     Colors.transparent,
                   ],
                   begin: Alignment.bottomCenter,
@@ -145,7 +145,7 @@ class _SplashPageState extends State<SplashPage>
                 height: 2,
                 width: 2,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.18),
+                  color: Colors.white.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(20),
                 ),
               )
@@ -178,7 +178,7 @@ class _SplashPageState extends State<SplashPage>
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.white.withOpacity(glow),
+                              color: Colors.white.withValues(alpha: glow),
                               blurRadius: 45,
                               spreadRadius: 20,
                             ),
@@ -205,7 +205,7 @@ class _SplashPageState extends State<SplashPage>
                   style: TextStyle(
                     fontFamily: "Caveat",
                     fontSize: 24,
-                    color: Colors.white.withOpacity(0.85),
+                    color: Colors.white.withValues(alpha: 0.85),
                   ),
                 ).animate().fadeIn(duration: 1200.ms, delay: 1400.ms),
               ],

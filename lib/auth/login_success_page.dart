@@ -2,8 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../home_page.dart';
-import '../services/guest_service.dart';
+import 'package:soul_note/home_page.dart';
+import 'package:soul_note/services/guest_service.dart';
 
 class LoginSuccessPage extends StatefulWidget {
   final bool isGuest;
@@ -82,9 +82,9 @@ class _LoginSuccessPageState extends State<LoginSuccessPage>
         child: Center(
           child: ScaleTransition(
             scale: _scale,
-            child: Column(
+            child: const Column(
               mainAxisSize: MainAxisSize.min,
-              children: const [
+              children: [
                 Icon(
                   Icons.check_circle_rounded,
                   color: Colors.greenAccent,

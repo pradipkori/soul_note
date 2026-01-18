@@ -2,17 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 
-import 'splash_page.dart';
-import 'home_page.dart';
-import 'auth/google_login_page.dart';
+import 'package:soul_note/splash_page.dart';
+import 'package:soul_note/home_page.dart';
+import 'package:soul_note/auth/google_login_page.dart';
 
-import 'models/note_model.dart';
-import 'models/note_song.dart';
-import 'storage/hive_boxes.dart';
-import 'firebase_options.dart';
+import 'package:soul_note/models/note_model.dart';
+import 'package:soul_note/models/note_song.dart';
+import 'package:soul_note/storage/hive_boxes.dart';
+import 'package:soul_note/firebase_options.dart';
 
 Future<void> handleEmailLinkSignIn() async {
   final auth = FirebaseAuth.instance;
@@ -66,8 +65,14 @@ Future<void> main() async {
   }
 
 
-  // 📦 Open notes box
-  await Hive.openBox<NoteModel>(HiveBoxes.notesBox);
+  // 📦 Open notes box (with crash recovery)
+  try {
+    await Hive.openBox<NoteModel>(HiveBoxes.notesBox);
+  } catch (e) {
+    debugPrint("🚨 Error opening Hive box: $e. Corrupted data likely from removed features. Clearing box...");
+    await Hive.deleteBoxFromDisk(HiveBoxes.notesBox);
+    await Hive.openBox<NoteModel>(HiveBoxes.notesBox);
+  }
 
   // 🔐 Handle email link login BEFORE app starts
   await handleEmailLinkSignIn();

@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:soul_note/models/note_model.dart';
-import 'package:soul_note/models/note_song.dart';
 import 'package:soul_note/storage/hive_boxes.dart';
 
 class CloudSyncService {
