@@ -1,16 +1,31 @@
-# soul_note
+# SoulNote 📝
 
-A new Flutter project.
+SoulNote is a privacy-first, offline-first notes app built with Flutter.
 
-## Getting Started
+## ✨ Features
+- Offline notes using Hive
+- Cloud backup with Firebase Firestore
+- Google Sign-In
+- Mood detection
+- Song attachments
+- Two-way cloud sync
+- Delete sync
+- Modern animated UI
 
-This project is a starting point for a Flutter application.
+## 🛠 Tech Stack
+- Flutter
+- Firebase Auth
+- Cloud Firestore
+- Hive
 
-A few resources to get you started if this is your first Flutter project:
+## 🔐 Privacy
+- Notes stored locally by default
+- Cloud sync only after login
+- No ads, no tracking
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## 📱 Status
+Actively maintained.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+---
+
+Made with ❤️ by Pradip
