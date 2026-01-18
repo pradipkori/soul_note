@@ -28,13 +28,15 @@ class NoteModelAdapter extends TypeAdapter<NoteModel> {
       isShared: fields[8] as bool,
       ownerId: fields[9] as String,
       collaborators: (fields[10] as List).cast<Collaborator>(),
+      lastEditedBy: fields[11] as String,
+      lastEditedAt: fields[12] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, NoteModel obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -56,7 +58,11 @@ class NoteModelAdapter extends TypeAdapter<NoteModel> {
       ..writeByte(9)
       ..write(obj.ownerId)
       ..writeByte(10)
-      ..write(obj.collaborators);
+      ..write(obj.collaborators)
+      ..writeByte(11)
+      ..write(obj.lastEditedBy)
+      ..writeByte(12)
+      ..write(obj.lastEditedAt);
   }
 
   @override

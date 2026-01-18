@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:soul_note/auth/login_success_page.dart';
+import 'package:soul_note/home_page.dart';
+import 'package:soul_note/services/guest_service.dart';
 
 import '../services/auth_service.dart';
-import '../home_page.dart';
-import 'email_phone_login_page.dart';
 
 class GoogleLoginPage extends StatefulWidget {
   const GoogleLoginPage({super.key});
@@ -21,7 +21,10 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
     setState(() => _loading = true);
 
     try {
-      final User? user = await _authService.signInWithGoogle();
+      final authService = AuthService();
+      await authService.signInWithGoogle();
+
+      final user = FirebaseAuth.instance.currentUser;
 
       if (user != null && mounted) {
         Navigator.pushReplacement(
@@ -35,8 +38,11 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
       );
     }
 
-    setState(() => _loading = false);
+    if (mounted) {
+      setState(() => _loading = false);
+    }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -177,24 +183,35 @@ class _GoogleLoginPageState extends State<GoogleLoginPage> {
 
                       const SizedBox(height: 16),
 
-                      // 📱 EMAIL / PHONE LOGIN
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const EmailPhoneLoginPage(),
-                            ),
-                          );
-                        },
-                        child: const Text(
-                          "Continue with Email / Phone",
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 15,
+                      // GUEST LOGIN
+                      const SizedBox(height: 16),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: OutlinedButton(
+                          onPressed: () async {
+                            final guestId = await GuestService.getOrCreateGuestId();
+
+                            if (!mounted) return;
+
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const LoginSuccessPage(
+                                  isGuest: true,
+                                ),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            "Continue as Guest",
+                            style: TextStyle(color: Colors.white),
                           ),
                         ),
                       ),
+
+
                     ],
                   ),
                 ),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 
 import 'splash_page.dart';
 import 'home_page.dart';
@@ -11,6 +13,34 @@ import 'models/note_model.dart';
 import 'models/note_song.dart';
 import 'storage/hive_boxes.dart';
 import 'firebase_options.dart';
+
+Future<void> handleEmailLinkSignIn() async {
+  final auth = FirebaseAuth.instance;
+  final link = Uri.base.toString();
+
+  if (!auth.isSignInWithEmailLink(link)) {
+    debugPrint("Not an email sign-in link: $link");
+    return;
+  }
+
+
+  final email = auth.currentUser?.email;
+
+  if (email == null) {
+    debugPrint("Email required to complete sign-in");
+    return;
+  }
+
+  try {
+    await auth.signInWithEmailLink(
+      email: email,
+      emailLink: link,
+    );
+  } catch (e) {
+    debugPrint("Email link sign-in failed: $e");
+  }
+}
+
 
 
 Future<void> main() async {
@@ -25,7 +55,6 @@ Future<void> main() async {
   // 🗄 Initialize Hive
   await Hive.initFlutter();
 
-  // 🔐 Register Hive adapters (ORDER & TYPEID SAFE)
   if (!Hive.isAdapterRegistered(0)) {
     Hive.registerAdapter(NoteModelAdapter());
   }
@@ -36,8 +65,12 @@ Future<void> main() async {
     Hive.registerAdapter(CollaboratorAdapter());
   }
 
+
   // 📦 Open notes box
   await Hive.openBox<NoteModel>(HiveBoxes.notesBox);
+
+  // 🔐 Handle email link login BEFORE app starts
+  await handleEmailLinkSignIn();
 
   runApp(const SoulNoteApp());
 }
@@ -97,7 +130,10 @@ class AuthGate extends StatelessWidget {
 
         // ✅ Logged in
         if (snapshot.hasData) {
-          return const HomePage();
+          return HomePage(
+            ownerId: snapshot.data!.uid,
+            isGuest: false,
+          );
         }
 
         // ❌ Not logged in

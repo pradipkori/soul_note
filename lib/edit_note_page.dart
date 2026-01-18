@@ -5,6 +5,7 @@ import 'package:soul_note/models/note_song.dart';
 import 'song_search_page.dart';
 import 'services/shared_note_service.dart';
 import 'services/cloud_sync_service.dart';
+import 'storage/hive_boxes.dart';
 
 
 class EditNotePage extends StatefulWidget {
@@ -44,15 +45,19 @@ class _EditNotePageState extends State<EditNotePage> {
   // ✅ EXISTING UPDATE LOGIC (UNCHANGED)
   // 🔁 UPDATE NOTE (LOCAL + CLOUD)
   Future<void> updateNote() async {
+    final user = FirebaseAuth.instance.currentUser;
+
     // 1️⃣ Update local note
     widget.note.title = titleCtrl.text;
     widget.note.content = contentCtrl.text;
+    widget.note.lastEditedBy = user?.email ?? '';
+    widget.note.lastEditedAt = DateTime.now();
 
-    await widget.note.save();
+    await HiveBoxes.getNotesBox().putAt(widget.index, widget.note);
 
     // 2️⃣ Update cloud note
     try {
-      await CloudSyncService.updateNote(widget.note as NoteModel);
+      await CloudSyncService.updateNote(widget.note);
     } catch (e) {
       debugPrint("❌ Cloud update failed: $e");
     }
@@ -79,7 +84,7 @@ class _EditNotePageState extends State<EditNotePage> {
     widget.note.isShared = true;
     widget.note.ownerId = user.uid;
 
-    await widget.note.save();
+    await HiveBoxes.getNotesBox().putAt(widget.index, widget.note);
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Note is now shared")),
@@ -123,7 +128,7 @@ class _EditNotePageState extends State<EditNotePage> {
                   widget.note.songs.add(song);
                 });
 
-                await widget.note.save();
+                await HiveBoxes.getNotesBox().putAt(widget.index, widget.note);
 
                 // 🔁 Sync song change to cloud
                 await CloudSyncService.updateNote(widget.note);
@@ -201,7 +206,7 @@ class _EditNotePageState extends State<EditNotePage> {
                               widget.note.songs.removeAt(index);
                             });
 
-                            await widget.note.save();
+                            await HiveBoxes.getNotesBox().putAt(widget.index, widget.note);
 
                             // 🔁 Sync song removal to cloud
                             await CloudSyncService.updateNote(widget.note);

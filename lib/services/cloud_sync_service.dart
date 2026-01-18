@@ -27,6 +27,8 @@ class CloudSyncService {
       'ownerId': user.uid,
       'isShared': note.isShared,
       'collaborators': {user.uid: true},
+      'lastEditedBy': note.lastEditedBy,
+      'lastEditedAt': note.lastEditedAt?.toIso8601String(),
 
       // 🎵 SONGS (MATCH NoteSong MODEL)
       'songs': note.songs.map((song) => {
@@ -77,6 +79,8 @@ class CloudSyncService {
       'timeOfDay': note.timeOfDay,
       'mood': note.mood,
       'writingDuration': note.writingDuration,
+      'lastEditedBy': note.lastEditedBy,
+      'lastEditedAt': note.lastEditedAt?.toIso8601String(),
       'updatedAt': DateTime.now().toIso8601String(),
 
       // 🎵 UPDATE SONGS
@@ -90,7 +94,7 @@ class CloudSyncService {
 
     }, SetOptions(merge: true));
 
-    debugPrint("✏️ Updated note in cloud: ${note.id}");
+    debugPrint("✏️ Updated note in cloud: ${note.id} by ${note.lastEditedBy}");
   }
 
   // =========================
@@ -105,49 +109,63 @@ class CloudSyncService {
 
     debugPrint("🔄 Restore started for uid: ${user.uid}");
 
-    final snapshot = await _firestore
+    // 1️⃣ Fetch owned notes
+    final ownedSnapshot = await _firestore
         .collection('notes')
         .where('ownerId', isEqualTo: user.uid)
         .get();
 
-    debugPrint("📦 Firestore docs found: ${snapshot.docs.length}");
+    // 2️⃣ Fetch shared notes (where uid exists in collaborators map)
+    // NOTE: This might require a composite index if combined with other fields
+    final sharedSnapshot = await _firestore
+        .collection('notes')
+        .where('collaborators.${user.uid}.role', whereIn: ['editor', 'viewer', 'owner'])
+        .get();
+
+    debugPrint("📦 Owned docs: ${ownedSnapshot.docs.length}, Shared docs: ${sharedSnapshot.docs.length}");
 
     final box = HiveBoxes.getNotesBox();
+    final allDocs = [...ownedSnapshot.docs, ...sharedSnapshot.docs];
 
-    for (final doc in snapshot.docs) {
-      final data = doc.data();
-      final List songsData = data['songs'] ?? [];
+    // Deduplicate if any doc is in both (shouldn't happen with these queries but good practice)
+    final Map<String, DocumentSnapshot> uniqueDocs = {};
+    for (var doc in allDocs) {
+      uniqueDocs[doc.id] = doc;
+    }
 
-      final note = NoteModel(
-        id: data['id'],
-        title: data['title'] ?? '',
-        content: data['content'] ?? '',
-        createdAt: DateTime.parse(data['createdAt']),
-        timeOfDay: data['timeOfDay'] ?? '',
-        mood: data['mood'] ?? '',
-        writingDuration: data['writingDuration'] ?? 0,
-        isShared: data['isShared'] ?? false,
-        ownerId: data['ownerId'] ?? '',
-
-        // 🎵 RESTORE SONGS
-        songs: songsData.map((s) => NoteSong(
-          title: s['title'] ?? '',
-          artist: s['artist'] ?? '',
-          previewUrl: s['previewUrl'] ?? '',
-          startSecond: s['startSecond'] ?? 0,
-          duration: s['duration'] ?? 0,
-        )).toList(),
-
-      );
+    for (final doc in uniqueDocs.values) {
+      final data = doc.data() as Map<String, dynamic>;
+      final note = NoteModel.fromMap(data);
 
       final exists = box.values.any((n) => n.id == note.id);
 
       if (!exists) {
         await box.add(note);
         debugPrint("✅ Restored note ${note.id}");
+      } else {
+        // Sync update: If cloud note has a newer lastEditedAt, update local.
+        final localNote = box.values.firstWhere((n) => n.id == note.id);
+        final cloudTime = note.lastEditedAt ?? note.createdAt;
+        final localTime = localNote.lastEditedAt ?? localNote.createdAt;
+
+        if (cloudTime.isAfter(localTime)) {
+           final index = box.values.toList().indexOf(localNote);
+           await box.putAt(index, note);
+           debugPrint("🔄 Updated local note ${note.id} from cloud (Cloud: $cloudTime > Local: $localTime)");
+        }
       }
     }
 
     debugPrint("🏁 Restore complete. Hive count: ${box.length}");
+  }
+
+  // =========================
+  // 📡 REAL-TIME SYNC (SINGLE NOTE)
+  // =========================
+  static Stream<NoteModel?> streamNote(String noteId) {
+    return _firestore.collection('notes').doc(noteId).snapshots().map((snapshot) {
+      if (!snapshot.exists) return null;
+      return NoteModel.fromMap(snapshot.data()!);
+    });
   }
 }

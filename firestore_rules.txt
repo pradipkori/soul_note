@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 🌙 SOUL NOTE RULES
+    match /notes/{noteId} {
+      
+      // ✅ READ: Allow if you are the owner OR if your UID is in the collaborators map
+      allow read: if request.auth != null && (
+        resource.data.ownerId == request.auth.uid || 
+        resource.data.collaborators[request.auth.uid] != null
+      );
+      
+      // ✅ CREATE: Allow if you are logged in
+      allow create: if request.auth != null;
+      
+      // ✅ UPDATE: 
+      // 1. Owners can update everything
+      // 2. Editors can update title, content, mood, etc. but NOT collaborators or ownerId
+      allow update: if request.auth != null && (
+        resource.data.ownerId == request.auth.uid || 
+        (
+          resource.data.collaborators[request.auth.uid].role == 'editor' &&
+          request.resource.data.ownerId == resource.data.ownerId &&
+          request.resource.data.collaborators == resource.data.collaborators
+        )
+      );
+      
+      // ✅ DELETE: Only the owner can delete a note
+      allow delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+    }
+    
+    // 👤 USER PROFILE RULES
+    match /users/{userId} {
+      allow read: if request.auth != null; // Everyone can find users by email (via query)
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

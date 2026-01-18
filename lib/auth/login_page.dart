@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'phone_otp_page.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -64,20 +63,7 @@ class LoginPage extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const PhoneOtpPage(),
-                  ),
-                );
-              },
-              child: const Text(
-                "Use phone number instead",
-                style: TextStyle(color: Colors.white70),
-              ),
-            ),
+
 
             const Spacer(),
           ],

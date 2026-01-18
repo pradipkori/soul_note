@@ -13,11 +13,19 @@ import 'auth/google_login_page.dart';
 
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final String ownerId;
+  final bool isGuest;
+
+  const HomePage({
+    super.key,
+    required this.ownerId,
+    required this.isGuest,
+  });
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
+
 
 class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
   bool _restoredFromCloud = false;
@@ -133,6 +141,42 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           ),
         ),
         actions: [
+          // 🏷️ GUEST BADGE
+          if (widget.isGuest)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Tooltip(
+                message: "Local only • Not backed up",
+                preferBelow: false,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.orangeAccent,
+                        width: 1,
+                      ),
+                    ),
+                    child: const Text(
+                      "GUEST",
+                      style: TextStyle(
+                        color: Colors.orangeAccent,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+
           // 🔍 SEARCH BUTTON
           IconButton(
             icon: Icon(_isSearching ? Icons.close : Icons.search),
@@ -146,57 +190,26 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               });
             },
           ),
-          // ☁️ FIRESTORE TEST BUTTON
-          IconButton(
-            icon: const Icon(Icons.cloud_upload),
-            tooltip: "Write test note to Firestore",
-            onPressed: () async {
-              await FirestoreTestService.writeTestNote();
 
-              if (!context.mounted) return;
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Written to Firestore'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
-          ),
-          // 👥 TEST COLLABORATOR BUTTON
-          IconButton(
-            icon: const Icon(Icons.people),
-            tooltip: "Test Collaborator",
-            onPressed: () async {
-              try {
-                const testNoteId = 'FwGzlVAbqe3IGwMs97Q6';
-
-                await CollaborationTestService.addTestCollaborator(
-                  noteId: testNoteId,
-                  collaboratorEmail: 'pradipkorii2005@gmail.com',
-                );
-
-                if (!context.mounted) return;
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Collaborator added")),
-                );
-              } catch (e) {
-                if (!context.mounted) return;
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(e.toString())),
-                );
-              }
-            },
-          ),
           // 🚪 LOGOUT BUTTON
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: "Logout",
             onPressed: () async {
+
+              // 🔥 CLEAR LOCAL NOTES (VERY IMPORTANT)
               final authService = AuthService();
-              await authService.signOut();
+
+// ❗ Only clear notes if NOT guest
+              if (!widget.isGuest) {
+                final notesBox = HiveBoxes.getNotesBox();
+                await notesBox.clear();
+              }
+
+// Sign out only if Google user
+              if (!widget.isGuest) {
+                await authService.signOut();
+              }
 
               if (!context.mounted) return;
 
@@ -430,22 +443,31 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                             children: [
                               Row(
                                 children: [
-                                  Expanded(
-                                    child: Text(
-                                      note.title.isEmpty ? "Untitled" : note.title,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.5,
+                                    Expanded(
+                                      child: Text(
+                                        note.title.isEmpty ? "Untitled" : note.title,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 0.5,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  Icon(
-                                    Icons.arrow_forward_ios,
-                                    color: Colors.white.withOpacity(0.3),
-                                    size: 16,
-                                  ),
+                                    if (note.isShared)
+                                      Padding(
+                                        padding: const EdgeInsets.only(right: 8),
+                                        child: Icon(
+                                          Icons.group_outlined,
+                                          color: Colors.deepPurple.shade300.withOpacity(0.6),
+                                          size: 18,
+                                        ),
+                                      ),
+                                    Icon(
+                                      Icons.arrow_forward_ios,
+                                      color: Colors.white.withOpacity(0.3),
+                                      size: 16,
+                                    ),
                                 ],
                               ),
                               const SizedBox(height: 10),

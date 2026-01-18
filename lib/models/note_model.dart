@@ -45,6 +45,12 @@ class NoteModel extends HiveObject {
   @HiveField(10)
   List<Collaborator> collaborators;
 
+  @HiveField(11)
+  String lastEditedBy;
+
+  @HiveField(12)
+  DateTime? lastEditedAt;
+
   NoteModel({
     required this.id,
     required this.title,
@@ -57,10 +63,21 @@ class NoteModel extends HiveObject {
     this.isShared = false,
     this.ownerId = '',
     this.collaborators = const [],
+    this.lastEditedBy = '',
+    this.lastEditedAt,
   });
 
   // 📄 Convert to Map (for Firestore)
   Map<String, dynamic> toMap() {
+    // Detailed collaborator map for management UI
+    Map<String, dynamic> detailedCollaborators = {};
+    for (var c in collaborators) {
+      detailedCollaborators[c.uid] = {
+        'role': c.role,
+        'email': c.email,
+      };
+    }
+
     return {
       'id': id,
       'title': title,
@@ -72,16 +89,39 @@ class NoteModel extends HiveObject {
       'songs': songs.map((song) => song.toMap()).toList(),
       'isShared': isShared,
       'ownerId': ownerId,
-      'collaborators': collaborators.map((c) => c.toMap()).toList(),
+      'collaborators': detailedCollaborators, // ✅ Detailed map
+      'lastEditedBy': lastEditedBy,
+      'lastEditedAt': lastEditedAt?.toIso8601String(),
     };
   }
 
   // 📄 Create from Map (from Firestore)
   factory NoteModel.fromMap(Map<String, dynamic> map) {
-    // ✅ FIXED: Generate fallback ID if empty
     String noteId = map['id']?.toString() ?? '';
     if (noteId.isEmpty) {
       noteId = '${DateTime.now().millisecondsSinceEpoch}_fallback_${DateTime.now().microsecond}';
+    }
+
+    // Handle collaborators map from Firestore (Flexible handling)
+    List<Collaborator> collabList = [];
+    if (map['collaborators'] is Map) {
+      (map['collaborators'] as Map).forEach((uid, val) {
+        if (val is Map) {
+          // Detailed Format
+          collabList.add(Collaborator(
+            uid: uid.toString(),
+            email: val['email']?.toString() ?? '',
+            role: val['role']?.toString() ?? 'viewer',
+          ));
+        } else {
+          // Backward Compatibility (Role only)
+          collabList.add(Collaborator(
+            uid: uid.toString(),
+            email: '',
+            role: val.toString(),
+          ));
+        }
+      });
     }
 
     return NoteModel(
@@ -98,10 +138,9 @@ class NoteModel extends HiveObject {
           [],
       isShared: map['isShared'] ?? false,
       ownerId: map['ownerId'] ?? '',
-      collaborators: (map['collaborators'] as List<dynamic>?)
-          ?.map((c) => Collaborator.fromMap(c as Map<String, dynamic>))
-          .toList() ??
-          [],
+      collaborators: collabList,
+      lastEditedBy: map['lastEditedBy'] ?? '',
+      lastEditedAt: map['lastEditedAt'] != null ? DateTime.parse(map['lastEditedAt']) : null,
     );
   }
 }
@@ -122,6 +161,7 @@ class Collaborator extends HiveObject {
     required this.uid,
     required this.email,
     required this.role,
+
   });
 
   // 📄 Convert to Map (for Firestore)

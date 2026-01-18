@@ -49,8 +49,12 @@ class _SplashPageState extends State<SplashPage>
           pageBuilder: (_, animation, __) => FadeTransition(
             opacity: animation,
             child: user != null
-                ? const HomePage()
+                ? HomePage(
+              ownerId: user.uid,
+              isGuest: false,
+            )
                 : const GoogleLoginPage(),
+
           ),
         ),
       );

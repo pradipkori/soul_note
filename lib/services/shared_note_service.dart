@@ -6,6 +6,7 @@ class SharedNoteService {
   Future<void> addCollaboratorByEmail({
     required String noteId,
     required String collaboratorEmail,
+    required String role, // owner | editor | viewer
   }) async {
     // STEP 1: Clean email
     final email = collaboratorEmail.trim().toLowerCase();
@@ -24,11 +25,32 @@ class SharedNoteService {
     // STEP 3: Extract UID
     final collaboratorUid = userQuery.docs.first.id;
 
-    // STEP 4: Add collaborator using SET with MERGE (KEY FIX!)
+    // STEP 4: Add collaborator and ensure isShared is true
     await _firestore.collection('notes').doc(noteId).set({
+      'isShared': true,
       'collaborators': {
-        collaboratorUid: true,
+        collaboratorUid: {
+           'role': role,
+           'email': email,
+        },
       }
     }, SetOptions(merge: true));
+  }
+
+  /// 🗑 Remove collaborator
+  Future<void> removeCollaborator(String noteId, String uid) async {
+    // 1. Remove the collaborator
+    await _firestore.collection('notes').doc(noteId).update({
+      'collaborators.$uid': FieldValue.delete(),
+    });
+
+    // 2. Optional: Re-check if any collaborators left to reset isShared
+    final doc = await _firestore.collection('notes').doc(noteId).get();
+    if (doc.exists) {
+      final collaborators = doc.data()?['collaborators'] as Map<String, dynamic>? ?? {};
+      if (collaborators.isEmpty) {
+        await _firestore.collection('notes').doc(noteId).update({'isShared': false});
+      }
+    }
   }
 }

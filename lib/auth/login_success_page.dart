@@ -1,14 +1,22 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../home_page.dart';
+import '../services/guest_service.dart';
 
 class LoginSuccessPage extends StatefulWidget {
-  const LoginSuccessPage({super.key});
+  final bool isGuest;
+
+  const LoginSuccessPage({
+    super.key,
+    this.isGuest = false,
+  });
 
   @override
   State<LoginSuccessPage> createState() => _LoginSuccessPageState();
 }
+
 
 class _LoginSuccessPageState extends State<LoginSuccessPage>
     with SingleTickerProviderStateMixin {
@@ -20,7 +28,6 @@ class _LoginSuccessPageState extends State<LoginSuccessPage>
   void initState() {
     super.initState();
 
-    // ✅ Haptic feedback
     HapticFeedback.mediumImpact();
 
     _controller = AnimationController(
@@ -36,14 +43,28 @@ class _LoginSuccessPageState extends State<LoginSuccessPage>
 
     _controller.forward();
 
-    // ⏩ Navigate to Home
-    Timer(const Duration(milliseconds: 1400), () {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const HomePage()),
-            (_) => false,
-      );
-    });
+    _navigateToHome();
+  }
+
+  Future<void> _navigateToHome() async {
+    await Future.delayed(const Duration(milliseconds: 1200));
+
+    final ownerId = widget.isGuest
+        ? await GuestService.getOrCreateGuestId()
+        : FirebaseAuth.instance.currentUser!.uid;
+
+    if (!mounted) return;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            HomePage(
+              ownerId: ownerId,
+              isGuest: widget.isGuest,
+            ),
+      ),
+    );
   }
 
   @override
@@ -93,4 +114,5 @@ class _LoginSuccessPageState extends State<LoginSuccessPage>
       ),
     );
   }
+
 }
