@@ -10,6 +10,7 @@ import 'package:soul_note/auth/google_login_page.dart';
 
 import 'package:soul_note/models/note_model.dart';
 import 'package:soul_note/models/note_song.dart';
+import 'package:soul_note/models/drawing_stroke.dart';
 import 'package:soul_note/storage/hive_boxes.dart';
 import 'package:soul_note/firebase_options.dart';
 
@@ -62,6 +63,12 @@ Future<void> main() async {
   }
   if (!Hive.isAdapterRegistered(2)) {
     Hive.registerAdapter(CollaboratorAdapter());
+  }
+  if (!Hive.isAdapterRegistered(3)) {
+    Hive.registerAdapter(DrawingPointAdapter());
+  }
+  if (!Hive.isAdapterRegistered(4)) {
+    Hive.registerAdapter(DrawingStrokeAdapter());
   }
 
 

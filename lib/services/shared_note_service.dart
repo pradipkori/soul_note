@@ -19,22 +19,21 @@ class SharedNoteService {
         .get();
 
     if (userQuery.docs.isEmpty) {
-      throw Exception('User with this email not found');
+      throw Exception('This user hasn\'t registered in Soul Note yet. Ask them to sign up first!');
     }
 
     // STEP 3: Extract UID
     final collaboratorUid = userQuery.docs.first.id;
 
     // STEP 4: Add collaborator and ensure isShared is true
-    await _firestore.collection('notes').doc(noteId).set({
+    // ✅ Using dot notation 'collaborators.uid' to avoid overwriting the whole map
+    await _firestore.collection('notes').doc(noteId).update({
       'isShared': true,
-      'collaborators': {
-        collaboratorUid: {
-           'role': role,
-           'email': email,
-        },
-      }
-    }, SetOptions(merge: true));
+      'collaborators.$collaboratorUid': {
+         'role': role,
+         'email': email,
+      },
+    });
   }
 
   /// 🗑 Remove collaborator

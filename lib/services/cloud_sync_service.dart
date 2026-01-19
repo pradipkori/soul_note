@@ -38,6 +38,9 @@ class CloudSyncService {
         'duration': song.duration,
       }).toList(),
 
+      // 🎨 DRAWING
+      'drawingStrokes': note.drawingStrokes.map((s) => s.toMap()).toList(),
+
     }, SetOptions(merge: true));
 
     debugPrint("☁️ Uploaded note ${note.id}");
@@ -90,6 +93,9 @@ class CloudSyncService {
         'startSecond': song.startSecond,
         'duration': song.duration,
       }).toList(),
+
+      // 🎨 DRAWING
+      'drawingStrokes': note.drawingStrokes.map((s) => s.toMap()).toList(),
 
     }, SetOptions(merge: true));
 

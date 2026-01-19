@@ -7,6 +7,8 @@ import 'package:soul_note/add_note_page.dart';
 import 'package:soul_note/view_note_page.dart';
 import 'package:soul_note/services/auth_service.dart';
 import 'package:soul_note/auth/google_login_page.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 
 
@@ -43,6 +45,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     );
     _fabController.forward();
 
+    _syncProfile(); // ✅ Ensure user profile exists in Firestore
     _fixExistingNoteIds();
     Future<void> restoreNotesFromCloud() async {
       debugPrint('☁️ HomePage: restoring notes from cloud...');
@@ -77,6 +80,22 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     _searchController.dispose();
     _fabController.dispose();
     super.dispose();
+  }
+
+  // ✅ Ensure current user is indexed in 'users' collection for collaboration
+  Future<void> _syncProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null && !widget.isGuest) {
+       debugPrint("👤 HomePage: Syncing user profile for collaboration...");
+       // We can reuse a simple set call here or add a method to CloudSyncService/AuthService
+       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+         'uid': user.uid,
+         'email': user.email?.toLowerCase().trim() ?? '',
+         'displayName': user.displayName ?? '',
+         'photoUrl': user.photoURL ?? '',
+         'lastSignIn': FieldValue.serverTimestamp(),
+       }, SetOptions(merge: true));
+    }
   }
 
   // ✅ NEW METHOD: Fix all existing notes with empty IDs

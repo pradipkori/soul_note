@@ -9,6 +9,8 @@ import 'package:soul_note/song_search_page.dart';
 import 'package:soul_note/services/cloud_sync_service.dart';
 import 'package:soul_note/utils/mood_analyzer.dart';
 import 'package:soul_note/storage/hive_boxes.dart';
+import 'package:soul_note/widgets/drawing_canvas.dart';
+import 'package:soul_note/models/drawing_stroke.dart';
 
 
 class EditNotePage extends StatefulWidget {
@@ -67,7 +69,7 @@ class _EditNotePageState extends State<EditNotePage> {
 
   void _debounceSave() {
     _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 1000), _autoSaveNote);
+    _debounceTimer = Timer(const Duration(milliseconds: 300), _autoSaveNote); // ⚡ Faster sync (300ms)
   }
 
   Future<void> _autoSaveNote() async {
@@ -122,12 +124,15 @@ class _EditNotePageState extends State<EditNotePage> {
     }
 
     // Sync local widget note object
-    widget.note.title = remoteNote.title;
-    widget.note.content = remoteNote.content;
-    widget.note.mood = remoteNote.mood;
-    widget.note.lastEditedBy = remoteNote.lastEditedBy;
-    widget.note.lastEditedAt = remoteNote.lastEditedAt;
-    widget.note.songs = remoteNote.songs;
+    setState(() {
+      widget.note.title = remoteNote.title;
+      widget.note.content = remoteNote.content;
+      widget.note.mood = remoteNote.mood;
+      widget.note.lastEditedBy = remoteNote.lastEditedBy;
+      widget.note.lastEditedAt = remoteNote.lastEditedAt;
+      widget.note.songs = remoteNote.songs;
+      widget.note.drawingStrokes = remoteNote.drawingStrokes;
+    });
 
     _isSyncingRemote = false;
   }
@@ -285,6 +290,11 @@ class _EditNotePageState extends State<EditNotePage> {
                 await CloudSyncService.updateNote(widget.note);
               }
             },
+          ),
+          // 🖌️ DRAWING
+          IconButton(
+            icon: const Icon(Icons.brush_rounded),
+            onPressed: _showDrawingSheet,
           ),
         ],
       ),
@@ -514,9 +524,109 @@ class _EditNotePageState extends State<EditNotePage> {
                   ),
                 ),
               ).animate().fadeIn(delay: 600.ms).scale(begin: const Offset(0.95, 0.95)),
+              const SizedBox(height: 48),
+
+              // 🎨 DRAWING PREVIEW
+              if (widget.note.drawingStrokes.isNotEmpty) ...[
+                Row(
+                  children: [
+                    const Icon(Icons.brush_rounded, color: Colors.white30, size: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      "CREATIVE SKETCH",
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  ],
+                ).animate().fadeIn(delay: 400.ms),
+                const SizedBox(height: 16),
+                GestureDetector(
+                  onTap: _showDrawingSheet,
+                  child: Container(
+                    height: 200,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.03),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                    ),
+                    clipBehavior: Clip.hardEdge,
+                    child: IgnorePointer(
+                      child: CustomPaint(
+                        painter: StrokePainter(strokes: widget.note.drawingStrokes),
+                        size: Size.infinite,
+                      ),
+                    ),
+                  ),
+                ).animate().fadeIn(delay: 450.ms),
+              ],
               const SizedBox(height: 40),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showDrawingSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F172A),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Creative Studio",
+                  style: TextStyle(
+                    fontFamily: "Caveat",
+                    fontSize: 28,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.check_circle_rounded, color: Colors.greenAccent, size: 30),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _onLocalChange(); // Trigger auto-save
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: DrawingCanvas(
+                initialStrokes: widget.note.drawingStrokes,
+                onStrokesChanged: (newStrokes) {
+                  setState(() => widget.note.drawingStrokes = newStrokes);
+                  _onLocalChange(); // 🔥 Real-time sync: trigger auto-save on every stroke
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );

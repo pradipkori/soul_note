@@ -1,5 +1,6 @@
 import 'package:hive/hive.dart';
 import 'note_song.dart';
+import 'drawing_stroke.dart';
 
 part 'note_model.g.dart';
 
@@ -51,6 +52,9 @@ class NoteModel extends HiveObject {
   @HiveField(12)
   DateTime? lastEditedAt;
 
+  @HiveField(13)
+  List<DrawingStroke> drawingStrokes;
+
   NoteModel({
     required this.id,
     required this.title,
@@ -65,6 +69,7 @@ class NoteModel extends HiveObject {
     this.collaborators = const [],
     this.lastEditedBy = '',
     this.lastEditedAt,
+    this.drawingStrokes = const [],
   });
 
   // 📄 Convert to Map (for Firestore)
@@ -92,6 +97,7 @@ class NoteModel extends HiveObject {
       'collaborators': detailedCollaborators, // ✅ Detailed map
       'lastEditedBy': lastEditedBy,
       'lastEditedAt': lastEditedAt?.toIso8601String(),
+      'drawingStrokes': drawingStrokes.map((s) => s.toMap()).toList(),
     };
   }
 
@@ -141,6 +147,10 @@ class NoteModel extends HiveObject {
       collaborators: collabList,
       lastEditedBy: map['lastEditedBy'] ?? '',
       lastEditedAt: map['lastEditedAt'] != null ? DateTime.parse(map['lastEditedAt']) : null,
+      drawingStrokes: (map['drawingStrokes'] as List<dynamic>?)
+          ?.map((s) => DrawingStroke.fromMap(s as Map<String, dynamic>))
+          .toList() ??
+          [],
     );
   }
 }

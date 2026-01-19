@@ -12,6 +12,7 @@ import 'package:soul_note/models/note_model.dart';
 import 'package:soul_note/models/note_song.dart';
 import 'package:soul_note/storage/hive_boxes.dart';
 import 'package:soul_note/edit_note_page.dart';
+import 'package:soul_note/widgets/drawing_canvas.dart';
 
 class ViewNotePage extends StatefulWidget {
   final int index;
@@ -484,7 +485,7 @@ class _ViewNotePageState extends State<ViewNotePage> {
                                         }
 
                                         Navigator.of(sheetContext).pop();
-                                        _showModernProgress(scaffoldContext);
+                                        _showSyncingOverlay(scaffoldContext, "Adding collaborator...");
 
                                         try {
                                           final firestoreService = FirestoreNoteService();
@@ -506,13 +507,13 @@ class _ViewNotePageState extends State<ViewNotePage> {
                                           currentNote.isShared = true;
                                           await HiveBoxes.getNotesBox().putAt(widget.index, currentNote);
 
-                                           if (!context.mounted) return;
-                                           ScaffoldMessenger.of(scaffoldContext).clearSnackBars();
+                                           if (!scaffoldContext.mounted) return;
+                                           Navigator.pop(scaffoldContext); // Dismiss overlay
                                            _showModernSnackBar(scaffoldContext, "✅ Collaborator added", Colors.green);
                                          } catch (e) {
-                                           if (!context.mounted) return;
-                                           ScaffoldMessenger.of(scaffoldContext).clearSnackBars();
-                                           _showModernSnackBar(scaffoldContext, "❌ ${e.toString()}", Colors.red);
+                                           if (!scaffoldContext.mounted) return;
+                                           Navigator.pop(scaffoldContext); // Dismiss overlay
+                                           _showModernSnackBar(scaffoldContext, "❌ ${e.toString().replaceAll('Exception: ', '')}", Colors.red);
                                          }
                                       },
                                       child: const Text(
@@ -792,6 +793,41 @@ class _ViewNotePageState extends State<ViewNotePage> {
                   ),
                 ),
               ],
+
+              // 🎨 DRAWING
+              if (currentNote.drawingStrokes.isNotEmpty) ...[
+                const SizedBox(height: 48),
+                Row(
+                  children: [
+                    const Icon(Icons.brush_rounded, color: Colors.white30, size: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      "CREATIVE SKETCH",
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  ],
+                ).animate().fadeIn(delay: 500.ms),
+                const SizedBox(height: 16),
+                Container(
+                  height: 300,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                  ),
+                  clipBehavior: Clip.hardEdge,
+                  child: CustomPaint(
+                    painter: StrokePainter(strokes: currentNote.drawingStrokes),
+                    size: Size.infinite,
+                  ),
+                ).animate().fadeIn(delay: 550.ms),
+              ],
             ],
           ),
         ),
@@ -862,21 +898,7 @@ class _ViewNotePageState extends State<ViewNotePage> {
     );
   }
 
-  void _showModernProgress(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      duration: const Duration(seconds: 30),
-      backgroundColor: const Color(0xFF151B2E),
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      content: Row(
-        children: [
-          const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)))),
-          const SizedBox(width: 16),
-          Text("Adding collaborator...", style: TextStyle(color: Colors.white.withValues(alpha: 0.8))),
-        ],
-      ),
-    ));
-  }
+
 
   void _showModernSnackBar(BuildContext context, String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(

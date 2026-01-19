@@ -8,6 +8,8 @@ import 'package:soul_note/utils/mood_analyzer.dart';
 
 import 'package:soul_note/song_search_page.dart';
 import 'package:soul_note/services/cloud_sync_service.dart';
+import 'package:soul_note/widgets/drawing_canvas.dart';
+import 'package:soul_note/models/drawing_stroke.dart';
 
 
 class AddNotePage extends StatefulWidget {
@@ -27,6 +29,7 @@ class _AddNotePageState extends State<AddNotePage>
   bool _isAnalyzingMood = false;
 
   final List<NoteSong> _songs = [];
+  List<DrawingStroke> _drawingStrokes = [];
 
   late AnimationController _fadeCtrl;
   late AnimationController _pulseCtrl;
@@ -56,6 +59,7 @@ class _AddNotePageState extends State<AddNotePage>
       mood: selectedMood,
       writingDuration: duration,
       songs: List.from(_songs),
+      drawingStrokes: List.from(_drawingStrokes),
     );
 
     // 1️⃣ SAVE LOCALLY (OFFLINE)
@@ -190,6 +194,28 @@ class _AddNotePageState extends State<AddNotePage>
               },
             ),
           ),
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [accent, Colors.pinkAccent],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: accent.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.brush_rounded, size: 22),
+              onPressed: _showDrawingSheet,
+            ),
+          ),
         ],
       ),
 
@@ -217,21 +243,41 @@ class _AddNotePageState extends State<AddNotePage>
           FadeTransition(
             opacity: _fadeCtrl,
             child: SafeArea(
-              child: Padding(
+              child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 8),
-                    _modernMoodChip(),
-                    const SizedBox(height: 24),
-                    _modernTitleField(),
-                    const SizedBox(height: 16),
-                    Expanded(child: _modernContentField()),
+                children: [
+                  const SizedBox(height: 8),
+                  _modernMoodChip(),
+                  const SizedBox(height: 24),
+                  _modernTitleField(),
+                  const SizedBox(height: 16),
+                  _modernContentField(),
+                  if (_drawingStrokes.isNotEmpty) ...[
                     const SizedBox(height: 20),
-                    _modernSaveButton(),
-                    const SizedBox(height: 12),
+                    GestureDetector(
+                      onTap: _showDrawingSheet,
+                      child: Container(
+                        height: 150,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.03),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                        ),
+                        clipBehavior: Clip.hardEdge,
+                        child: IgnorePointer(
+                          child: CustomPaint(
+                            painter: StrokePainter(strokes: _drawingStrokes),
+                            size: Size.infinite,
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
-                ),
+                  const SizedBox(height: 24),
+                  _modernSaveButton(),
+                  const SizedBox(height: 20),
+                ],
               ),
             ),
           ),
@@ -385,7 +431,7 @@ class _AddNotePageState extends State<AddNotePage>
       child: TextField(
         controller: contentCtrl,
         maxLines: null,
-        expands: true,
+        minLines: 12, // Provides a reasonable default height
         textAlignVertical: TextAlignVertical.top,
         style: const TextStyle(
           color: Colors.white70,
@@ -444,6 +490,62 @@ class _AddNotePageState extends State<AddNotePage>
                 fontSize: 17,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDrawingSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Creative Studio",
+                  style: TextStyle(
+                    fontFamily: "Caveat",
+                    fontSize: 28,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.check_circle_rounded, color: Colors.greenAccent, size: 30),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: DrawingCanvas(
+                initialStrokes: _drawingStrokes,
+                onStrokesChanged: (newStrokes) {
+                  setState(() => _drawingStrokes = newStrokes);
+                },
               ),
             ),
           ],

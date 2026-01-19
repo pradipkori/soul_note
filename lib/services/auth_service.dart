@@ -1,8 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // =========================
   // 🔐 GOOGLE SIGN-IN
@@ -20,7 +22,27 @@ class AuthService {
       idToken: googleAuth.idToken,
     );
 
-    return await _auth.signInWithCredential(credential);
+    final userCredential = await _auth.signInWithCredential(credential);
+    
+    // ✅ SYNC USER DATA TO FIRESTORE
+    if (userCredential.user != null) {
+      await _updateUserProfile(userCredential.user!);
+    }
+    
+    return userCredential;
+  }
+
+  // =========================
+  // 👤 UPDATE USER DATA
+  // =========================
+  Future<void> _updateUserProfile(User user) async {
+    await _firestore.collection('users').doc(user.uid).set({
+      'uid': user.uid,
+      'email': user.email?.toLowerCase().trim() ?? '',
+      'displayName': user.displayName ?? '',
+      'photoUrl': user.photoURL ?? '',
+      'lastSignIn': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   // =========================
